@@ -1,0 +1,23 @@
+[
+  {
+    "name": "プロジェクト仕様書",
+    "path": "C:\\Documents\\project_spec.docx",
+    "tags": "仕様書,重要",
+    "position": 0,
+    "added_at": "2025-01-19T10:00:00"
+  },
+  {
+    "name": "設計書",
+    "path": "\\\\fileserver\\share\\design\\system_design.pdf",
+    "tags": "設計,共有",
+    "position": 1,
+    "added_at": "2025-01-19T10:30:00"
+  },
+  {
+    "name": "ソースコード",
+    "path": "C:\\Projects\\MyApp\\src",
+    "tags": "開発",
+    "position": 2,
+    "added_at": "2025-01-19T11:00:00"
+  }
+]
