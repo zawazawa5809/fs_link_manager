@@ -37,6 +37,7 @@ from widget_factory import WidgetFactory
 
 # Configure logging
 import logging
+import sqlite3
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -55,11 +56,424 @@ class ViewMode(Enum):
     """View modes for the link list"""
     LIST = "list"
     GRID = "grid"
-    COMPACT = "compact"
 
 
-# Import existing classes from original implementation
-from fs_link_manager import LinkRecord, LinkDatabase, LinkAddDialog
+# Database classes
+class LinkRecord:
+    def __init__(self, id_: int, name: str, path: str, tags: str, position: int, added_at: str):
+        self.id = id_
+        self.name = name
+        self.path = path
+        self.tags = tags or ""
+        self.position = position
+        self.added_at = added_at
+
+    def display_text(self) -> str:
+        base = self.name if self.name else os.path.basename(self.path) or self.path
+        tag_part = f"  [{self.tags}]" if self.tags else ""
+        return f"{base}{tag_part}\n{self.path}"
+
+    def get_tags_list(self) -> List[str]:
+        """タグをリスト形式で取得"""
+        if not self.tags:
+            return []
+        return [tag.strip() for tag in self.tags.split(',') if tag.strip()]
+
+
+class LinkDatabase:
+    def __init__(self, db_path: str = DB_PATH):
+        self.conn = sqlite3.connect(db_path)
+        self.conn.execute("PRAGMA journal_mode=WAL;")
+        self.conn.execute("PRAGMA foreign_keys=ON;")
+        self._init_schema()
+
+    def _init_schema(self):
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                path TEXT NOT NULL,
+                tags TEXT,
+                position INTEGER NOT NULL,
+                added_at TEXT NOT NULL
+            );
+            """
+        )
+        self.conn.commit()
+
+    def add_link(self, name: str, path: str, tags: str = "") -> int:
+        cur = self.conn.cursor()
+        cur.execute("SELECT COALESCE(MAX(position), -1) + 1 FROM links;")
+        next_pos = cur.fetchone()[0]
+        added_at = datetime.now().isoformat(timespec="seconds")
+        cur.execute(
+            "INSERT INTO links(name, path, tags, position, added_at) VALUES (?, ?, ?, ?, ?);",
+            (name, path, tags, next_pos, added_at),
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def update_link(self, id_: int, *, name: Optional[str] = None, path: Optional[str] = None, tags: Optional[str] = None):
+        sets = []
+        vals = []
+        if name is not None:
+            sets.append("name = ?")
+            vals.append(name)
+        if path is not None:
+            sets.append("path = ?")
+            vals.append(path)
+        if tags is not None:
+            sets.append("tags = ?")
+            vals.append(tags)
+        if not sets:
+            return
+        vals.append(id_)
+        self.conn.execute(f"UPDATE links SET {', '.join(sets)} WHERE id = ?;", vals)
+        self.conn.commit()
+
+    def delete_link(self, id_: int):
+        self.conn.execute("DELETE FROM links WHERE id = ?;", (id_,))
+        self.conn.commit()
+
+    def list_links(self, search: str = "") -> List[LinkRecord]:
+        search = (search or "").strip()
+        if search:
+            like = f"%{search}%"
+            rows = self.conn.execute(
+                "SELECT id, name, path, tags, position, added_at FROM links "
+                "WHERE name LIKE ? OR path LIKE ? OR tags LIKE ? "
+                "ORDER BY position ASC;",
+                (like, like, like),
+            ).fetchall()
+        else:
+            rows = self.conn.execute(
+                "SELECT id, name, path, tags, position, added_at FROM links ORDER BY position ASC;"
+            ).fetchall()
+        return [LinkRecord(*r) for r in rows]
+
+    def reorder(self, ordered_ids: List[int]):
+        # Reassign positions to match list order
+        for pos, id_ in enumerate(ordered_ids):
+            self.conn.execute("UPDATE links SET position = ? WHERE id = ?;", (pos, id_))
+        self.conn.commit()
+
+
+class LinkAddDialog(QDialog):
+    """Dialog for adding links with individual form fields"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("リンクを追加")
+        self.setModal(True)
+        self.resize(800, 600)
+
+        # Main layout
+        main_layout = QVBoxLayout()
+        self.setLayout(main_layout)
+
+        # Tab widget for different input methods
+        self.tab_widget = QTabWidget()
+        main_layout.addWidget(self.tab_widget)
+
+        # Form input tab
+        self.form_widget = self.create_form_tab()
+        self.tab_widget.addTab(self.form_widget, "フォーム入力")
+
+        # Table input tab
+        self.table_widget = self.create_table_tab()
+        self.tab_widget.addTab(self.table_widget, "複数リンク")
+
+        # Advanced JSON tab
+        self.json_widget = self.create_json_tab()
+        self.tab_widget.addTab(self.json_widget, "アドバンス（JSON）")
+
+        # Dialog buttons
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        self.button_box.accepted.connect(self.validate_and_accept)
+        self.button_box.rejected.connect(self.reject)
+        main_layout.addWidget(self.button_box)
+
+    def create_form_tab(self):
+        """Create form-based input tab"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Form group box
+        form_group = QGroupBox("リンク情報")
+        form_layout = QFormLayout()
+        form_group.setLayout(form_layout)
+
+        # Path field with browse button
+        path_layout = QHBoxLayout()
+        self.path_edit = QLineEdit()
+        self.path_edit.setPlaceholderText("必須: C:\\folder\\file.txt")
+        path_layout.addWidget(self.path_edit)
+
+        browse_btn = QPushButton("参照...")
+        browse_btn.clicked.connect(self.browse_path)
+        path_layout.addWidget(browse_btn)
+
+        form_layout.addRow("パス (必須):", path_layout)
+
+        # Name field
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("オプション: 自動でファイル名が使われます")
+        form_layout.addRow("表示名:", self.name_edit)
+
+        # Tags field
+        self.tags_edit = QLineEdit()
+        self.tags_edit.setPlaceholderText("オプション: タグ1,タグ2,タグ3")
+        form_layout.addRow("タグ:", self.tags_edit)
+
+        layout.addWidget(form_group)
+
+        # Preview
+        preview_group = QGroupBox("プレビュー")
+        preview_layout = QVBoxLayout()
+        preview_group.setLayout(preview_layout)
+
+        self.preview_label = QLabel("入力内容のプレビューがここに表示されます")
+        self.preview_label.setWordWrap(True)
+        self.preview_label.setStyleSheet("padding: 10px; background-color: #f0f0f0;")
+        preview_layout.addWidget(self.preview_label)
+
+        layout.addWidget(preview_group)
+
+        # Connect updates
+        self.path_edit.textChanged.connect(self.update_preview)
+        self.name_edit.textChanged.connect(self.update_preview)
+        self.tags_edit.textChanged.connect(self.update_preview)
+
+        layout.addStretch()
+        return widget
+
+    def create_table_tab(self):
+        """Create table-based input tab for multiple links"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Instructions
+        instructions = QLabel(
+            "複数のリンクを表形式で入力できます。\n"
+            "ドラッグ＆ドロップでファイルを追加することもできます。"
+        )
+        instructions.setWordWrap(True)
+        layout.addWidget(instructions)
+
+        # Table
+        self.table = QTableWidget()
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["パス (必須)", "表示名", "タグ"])
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.setAcceptDrops(True)
+
+        # Initial empty rows
+        self.add_table_row()
+
+        layout.addWidget(self.table)
+
+        # Table control buttons
+        btn_layout = QHBoxLayout()
+
+        add_row_btn = QPushButton("行を追加")
+        add_row_btn.clicked.connect(self.add_table_row)
+        btn_layout.addWidget(add_row_btn)
+
+        remove_row_btn = QPushButton("選択行を削除")
+        remove_row_btn.clicked.connect(self.remove_table_row)
+        btn_layout.addWidget(remove_row_btn)
+
+        clear_btn = QPushButton("すべてクリア")
+        clear_btn.clicked.connect(self.clear_table)
+        btn_layout.addWidget(clear_btn)
+
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
+
+        return widget
+
+    def create_json_tab(self):
+        """Create JSON editor tab (advanced)"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Warning
+        warning = QLabel(
+            "⚠️ アドバンスモード: JSON形式を直接編集できます。\n"
+            "構文エラーに注意してください。"
+        )
+        warning.setStyleSheet("color: orange; font-weight: bold;")
+        layout.addWidget(warning)
+
+        # JSON editor
+        self.json_editor = QTextEdit()
+        self.json_editor.setFont(QFont("Consolas", 10))
+        self.json_editor.setPlaceholderText(
+            '[\n'
+            '  {\n'
+            '    "name": "ファイル名",\n'
+            '    "path": "C:\\\\path\\\\file.txt",\n'
+            '    "tags": "タグ1,タグ2"\n'
+            '  }\n'
+            ']'
+        )
+        layout.addWidget(self.json_editor)
+
+        # Template buttons
+        template_layout = QHBoxLayout()
+
+        single_template_btn = QPushButton("単一テンプレート")
+        single_template_btn.clicked.connect(self.insert_single_json_template)
+        template_layout.addWidget(single_template_btn)
+
+        multi_template_btn = QPushButton("複数テンプレート")
+        multi_template_btn.clicked.connect(self.insert_multi_json_template)
+        template_layout.addWidget(multi_template_btn)
+
+        format_btn = QPushButton("JSON整形")
+        format_btn.clicked.connect(self.format_json)
+        template_layout.addWidget(format_btn)
+
+        template_layout.addStretch()
+        layout.addLayout(template_layout)
+
+        return widget
+
+    def browse_path(self):
+        """Open file/folder browser"""
+        dlg = QFileDialog(self, "リンク対象を選択")
+        dlg.setFileMode(QFileDialog.AnyFile)
+        if dlg.exec():
+            paths = dlg.selectedFiles()
+            if paths:
+                self.path_edit.setText(paths[0])
+
+    def update_preview(self):
+        """Update preview based on form input"""
+        path = self.path_edit.text()
+        name = self.name_edit.text() or os.path.basename(path) if path else ""
+        tags = self.tags_edit.text()
+
+        if not path:
+            self.preview_label.setText("パスを入力してください")
+            self.preview_label.setStyleSheet("padding: 10px; background-color: #fff0f0;")
+        else:
+            preview = f"表示名: {name}\nパス: {path}"
+            if tags:
+                preview += f"\nタグ: {tags}"
+            self.preview_label.setText(preview)
+            self.preview_label.setStyleSheet("padding: 10px; background-color: #f0fff0;")
+
+    def add_table_row(self):
+        """Add a new row to the table"""
+        row_count = self.table.rowCount()
+        self.table.insertRow(row_count)
+
+    def remove_table_row(self):
+        """Remove selected row from table"""
+        current_row = self.table.currentRow()
+        if current_row >= 0:
+            self.table.removeRow(current_row)
+
+    def clear_table(self):
+        """Clear all table rows"""
+        self.table.setRowCount(0)
+        self.add_table_row()
+
+    def insert_single_json_template(self):
+        """Insert single link JSON template"""
+        template = '{\n  "name": "ファイル名",\n  "path": "C:\\\\path\\\\file.txt",\n  "tags": "タグ1,タグ2"\n}'
+        self.json_editor.setPlainText(template)
+
+    def insert_multi_json_template(self):
+        """Insert multiple links JSON template"""
+        template = '[\n  {\n    "name": "ファイル1",\n    "path": "C:\\\\path\\\\file1.txt",\n    "tags": "タグ1"\n  },\n  {\n    "name": "ファイル2",\n    "path": "C:\\\\path\\\\file2.txt",\n    "tags": "タグ2"\n  }\n]'
+        self.json_editor.setPlainText(template)
+
+    def format_json(self):
+        """Format JSON text"""
+        try:
+            import json
+            text = self.json_editor.toPlainText()
+            if text:
+                data = json.loads(text)
+                formatted = json.dumps(data, ensure_ascii=False, indent=2)
+                self.json_editor.setPlainText(formatted)
+        except:
+            pass
+
+    def validate_and_accept(self):
+        """Validate input and accept dialog"""
+        current_tab = self.tab_widget.currentIndex()
+
+        if current_tab == 0:  # Form tab
+            if not self.path_edit.text():
+                QMessageBox.warning(self, "入力エラー", "パスは必須項目です")
+                return
+        elif current_tab == 1:  # Table tab
+            has_valid = False
+            for row in range(self.table.rowCount()):
+                path_item = self.table.item(row, 0)
+                if path_item and path_item.text():
+                    has_valid = True
+                    break
+            if not has_valid:
+                QMessageBox.warning(self, "入力エラー", "少なくとも1つのパスを入力してください")
+                return
+        elif current_tab == 2:  # JSON tab
+            try:
+                import json
+                text = self.json_editor.toPlainText()
+                if text:
+                    json.loads(text)
+            except:
+                QMessageBox.warning(self, "JSONエラー", "JSON形式が正しくありません")
+                return
+
+        self.accept()
+
+    def get_links_data(self):
+        """Get the entered links data"""
+        current_tab = self.tab_widget.currentIndex()
+        links = []
+
+        if current_tab == 0:  # Form tab
+            path = self.path_edit.text()
+            if path:
+                links.append({
+                    "path": path,
+                    "name": self.name_edit.text(),
+                    "tags": self.tags_edit.text()
+                })
+        elif current_tab == 1:  # Table tab
+            for row in range(self.table.rowCount()):
+                path_item = self.table.item(row, 0)
+                name_item = self.table.item(row, 1)
+                tags_item = self.table.item(row, 2)
+
+                if path_item and path_item.text():
+                    links.append({
+                        "path": path_item.text(),
+                        "name": name_item.text() if name_item else "",
+                        "tags": tags_item.text() if tags_item else ""
+                    })
+        elif current_tab == 2:  # JSON tab
+            try:
+                import json
+                text = self.json_editor.toPlainText()
+                if text:
+                    data = json.loads(text)
+                    if isinstance(data, dict):
+                        links = [data]
+                    else:
+                        links = data
+            except:
+                pass
+
+        return links
 
 
 class ThemedCardDelegate(QStyledItemDelegate):
@@ -432,7 +846,7 @@ class ThemedMainWindow(QMainWindow):
         view_layout.addWidget(view_label)
 
         self.view_combo = WidgetFactory.create_combo_box(
-            ["リスト", "グリッド", "コンパクト"]
+            ["リスト", "グリッド"]
         )
         self.view_combo.currentIndexChanged.connect(self._on_view_mode_changed)
         view_layout.addWidget(self.view_combo)
@@ -538,7 +952,7 @@ class ThemedMainWindow(QMainWindow):
 
     def _on_view_mode_changed(self, index):
         """Handle view mode change"""
-        modes = [ViewMode.LIST, ViewMode.GRID, ViewMode.COMPACT]
+        modes = [ViewMode.LIST, ViewMode.GRID]
         self.list_view.set_view_mode(modes[index])
         self.reload_list()
 
