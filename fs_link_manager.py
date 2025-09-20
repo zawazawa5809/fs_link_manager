@@ -12,17 +12,18 @@ import sqlite3
 import subprocess
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
+import mimetypes
 
 from PySide6.QtCore import Qt, QMimeData, QSize, Signal, Slot
-from PySide6.QtGui import QAction, QDesktopServices, QIcon, QFont
+from PySide6.QtGui import QAction, QIcon, QFont
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QListWidget, QListWidgetItem, QLabel, QFileDialog,
     QMessageBox, QMenu, QPushButton, QStyle, QToolBar, QStatusBar,
     QInputDialog, QDialog, QTextEdit, QDialogButtonBox, QSplitter,
-    QTableWidget, QTableWidgetItem, QHeaderView, QFormLayout,
-    QGroupBox, QTabWidget, QToolButton
+    QTableWidget, QTableWidgetItem, QFormLayout,
+    QGroupBox, QTabWidget
 )
 
 # Configure logging
@@ -728,6 +729,42 @@ class MainWindow(QMainWindow):
         self.resize(780, 520)
         self.db = LinkDatabase()
 
+        # ファイルタイプとタグのマッピング
+        self.file_type_tags = {
+            # 文書
+            '.doc': '文書', '.docx': '文書', '.pdf': '文書', '.txt': 'テキスト',
+            '.odt': '文書', '.rtf': '文書',
+            # 表計算
+            '.xls': 'Excel', '.xlsx': 'Excel', '.csv': 'データ', '.ods': '表計算',
+            # プレゼンテーション
+            '.ppt': 'PowerPoint', '.pptx': 'PowerPoint', '.odp': 'プレゼン',
+            # 画像
+            '.jpg': '画像', '.jpeg': '画像', '.png': '画像', '.gif': '画像',
+            '.bmp': '画像', '.svg': '画像', '.ico': '画像', '.webp': '画像',
+            # 動画
+            '.mp4': '動画', '.avi': '動画', '.mkv': '動画', '.mov': '動画',
+            '.wmv': '動画', '.flv': '動画', '.webm': '動画',
+            # 音楽・音声
+            '.mp3': '音楽', '.wav': '音声', '.flac': '音楽', '.aac': '音楽',
+            '.ogg': '音声', '.wma': '音楽', '.m4a': '音楽',
+            # アーカイブ
+            '.zip': 'アーカイブ', '.rar': 'アーカイブ', '.7z': 'アーカイブ',
+            '.tar': 'アーカイブ', '.gz': 'アーカイブ', '.bz2': 'アーカイブ',
+            # プログラミング
+            '.py': 'Python', '.js': 'JavaScript', '.html': 'HTML', '.css': 'CSS',
+            '.cpp': 'C++', '.c': 'C言語', '.java': 'Java', '.cs': 'C#',
+            '.php': 'PHP', '.rb': 'Ruby', '.go': 'Go', '.rs': 'Rust',
+            '.swift': 'Swift', '.kt': 'Kotlin', '.ts': 'TypeScript',
+            '.json': 'JSON', '.xml': 'XML', '.yaml': 'YAML', '.yml': 'YAML',
+            '.sql': 'SQL', '.sh': 'シェル', '.bat': 'バッチ', '.ps1': 'PowerShell',
+            # 実行ファイル
+            '.exe': '実行ファイル', '.msi': 'インストーラ', '.app': 'アプリ',
+            '.dll': 'ライブラリ', '.so': 'ライブラリ',
+            # その他
+            '.iso': 'ディスクイメージ', '.dmg': 'ディスクイメージ',
+            '.log': 'ログ', '.bak': 'バックアップ', '.tmp': '一時ファイル'
+        }
+
         # Toolbar
         toolbar = QToolBar("Main")
         toolbar.setMovable(False)
@@ -835,12 +872,176 @@ class MainWindow(QMainWindow):
             self.listw.addItem(self.make_item(rec))
         self.statusBar().showMessage(f"{self.listw.count()} 件")
 
+    def analyze_file(self, path: str) -> Dict[str, any]:
+        """ファイルやフォルダを解析して情報を取得"""
+        info = {
+            'path': path,
+            'name': os.path.basename(path) or path,
+            'tags': [],
+            'size': 0,
+            'type': 'unknown',
+            'exists': os.path.exists(path)
+        }
+
+        try:
+            if os.path.exists(path):
+                # ファイルサイズの取得
+                if os.path.isfile(path):
+                    info['size'] = os.path.getsize(path)
+                    info['type'] = 'file'
+
+                    # ファイルサイズに基づくタグ
+                    size_mb = info['size'] / (1024 * 1024)
+                    if size_mb > 1000:
+                        info['tags'].append('大容量')
+                    elif size_mb < 0.1:
+                        info['tags'].append('小ファイル')
+
+                elif os.path.isdir(path):
+                    info['type'] = 'directory'
+                    info['tags'].append('フォルダ')
+
+                    # ディレクトリ内のファイル数をカウント
+                    try:
+                        items = os.listdir(path)
+                        info['file_count'] = len(items)
+                        if len(items) > 100:
+                            info['tags'].append('大量ファイル')
+                        elif len(items) == 0:
+                            info['tags'].append('空フォルダ')
+                    except:
+                        pass
+
+                # 更新日時の取得
+                try:
+                    mtime = os.path.getmtime(path)
+                    info['modified'] = datetime.fromtimestamp(mtime)
+
+                    # 最近更新されたかチェック
+                    days_old = (datetime.now() - info['modified']).days
+                    if days_old <= 7:
+                        info['tags'].append('最近更新')
+                    elif days_old >= 365:
+                        info['tags'].append('古いファイル')
+                except:
+                    pass
+
+            else:
+                # パスが存在しない場合
+                info['tags'].append('存在しない')
+
+                # ネットワークパスかチェック
+                if path.startswith('\\\\'):
+                    info['tags'].append('ネットワーク')
+                    info['type'] = 'network'
+
+        except Exception as e:
+            logger.error(f"Failed to analyze file {path}: {e}")
+
+        return info
+
+    def get_auto_tags(self, path: str) -> List[str]:
+        """パスから自動的にタグを生成"""
+        tags = []
+
+        # 拡張子からタグを取得
+        _, ext = os.path.splitext(path)
+        ext_lower = ext.lower()
+        if ext_lower in self.file_type_tags:
+            tags.append(self.file_type_tags[ext_lower])
+
+        # パスの種類によるタグ付け
+        if path.startswith('\\\\'):
+            tags.append('ネットワーク')
+        elif ':' in path and path[1] == ':':
+            drive = path[0].upper()
+            if drive == 'C':
+                tags.append('システムドライブ')
+            else:
+                tags.append(f'{drive}ドライブ')
+
+        # 特定のフォルダ名を含む場合のタグ付け
+        path_lower = path.lower()
+        if 'desktop' in path_lower or 'デスクトップ' in path_lower:
+            tags.append('デスクトップ')
+        elif 'documents' in path_lower or 'ドキュメント' in path_lower:
+            tags.append('ドキュメント')
+        elif 'downloads' in path_lower or 'ダウンロード' in path_lower:
+            tags.append('ダウンロード')
+        elif 'pictures' in path_lower or '画像' in path_lower:
+            tags.append('ピクチャ')
+        elif 'music' in path_lower or '音楽' in path_lower:
+            tags.append('ミュージック')
+        elif 'videos' in path_lower or 'ビデオ' in path_lower:
+            tags.append('ビデオ')
+        elif 'temp' in path_lower or 'tmp' in path_lower:
+            tags.append('一時フォルダ')
+        elif 'backup' in path_lower or 'バックアップ' in path_lower:
+            tags.append('バックアップ')
+        elif 'program' in path_lower:
+            tags.append('プログラム')
+
+        return tags
+
+    def format_file_size(self, size: int) -> str:
+        """ファイルサイズを読みやすい形式に変換"""
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024.0:
+                if unit == 'B':
+                    return f"{size} {unit}"
+                else:
+                    return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} PB"
+
     @Slot(list)
     def on_links_dropped(self, pairs: List[tuple]):
+        added_items = []
+
         for name, path in pairs:
-            self.db.add_link(name=name, path=path, tags="")
+            # ファイルを解析
+            file_info = self.analyze_file(path)
+
+            # 自動タグを取得
+            auto_tags = self.get_auto_tags(path)
+            all_tags = list(set(file_info.get('tags', []) + auto_tags))
+
+            # 表示用の詳細な名前を生成（ただしデータベースにはシンプルな名前を保存）
+            enhanced_name_display = name
+            if file_info.get('exists'):
+                if file_info.get('type') == 'file' and file_info.get('size', 0) > 0:
+                    size_str = self.format_file_size(file_info['size'])
+                    enhanced_name_display = f"{name} ({size_str})"
+                    # サイズ情報をタグに追加
+                    all_tags.append(size_str)
+                elif file_info.get('type') == 'directory' and 'file_count' in file_info:
+                    count = file_info['file_count']
+                    enhanced_name_display = f"{name} ({count}個のアイテム)"
+                    # ファイル数情報をタグに追加
+                    all_tags.append(f"{count}個")
+
+            # データベースにはシンプルな名前を保存
+            self.db.add_link(
+                name=name,  # シンプルな名前を保存
+                path=path,
+                tags=', '.join(all_tags) if all_tags else ""
+            )
+
+            added_items.append({
+                'name': enhanced_name_display,
+                'path': path,
+                'tags': all_tags
+            })
+
         self.reload_list()
-        self.statusBar().showMessage(f"{len(pairs)} 件追加")
+
+        # 詳細なステータスメッセージ
+        if len(added_items) == 1:
+            item = added_items[0]
+            tags_str = f" [{', '.join(item['tags'])}]" if item['tags'] else ""
+            self.statusBar().showMessage(f"追加: {item['name']}{tags_str}")
+        else:
+            self.statusBar().showMessage(f"{len(added_items)} 件のアイテムを自動解析して追加しました")
 
     def current_record_id(self) -> Optional[int]:
         item = self.listw.currentItem()
@@ -857,14 +1058,14 @@ class MainWindow(QMainWindow):
             return
         if os.path.isdir(path):
             # Open folder directly
-            subprocess.Popen(["explorer", path])
+            subprocess.Popen(f'explorer "{os.path.normpath(path)}"', shell=True)
         else:
             # If the path exists and is a file, select it; otherwise try to open parent
             if os.path.exists(path):
-                subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
+                subprocess.Popen(f'explorer /select,"{os.path.normpath(path)}"', shell=True)
             else:
                 parent = os.path.dirname(path) or path
-                subprocess.Popen(["explorer", parent])
+                subprocess.Popen(f'explorer "{os.path.normpath(parent)}"', shell=True)
 
     def on_item_double_clicked(self, item: QListWidgetItem):
         id_ = int(item.data(Qt.UserRole))
