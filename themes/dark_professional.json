@@ -1,0 +1,95 @@
+{
+  "name": "Dark Professional",
+  "version": "1.0.0",
+  "colors": {
+    "window": "#232428",
+    "window_text": "#eeeeee",
+    "base": "#2b2d31",
+    "alternate_base": "#35363a",
+    "text": "#ffffff",
+    "button": "#35363a",
+    "button_text": "#ffffff",
+    "bright_text": "#ff0000",
+    "highlight": "#2f6fff",
+    "highlighted_text": "#ffffff",
+    "link": "#5a8fff",
+    "link_visited": "#8a6fff",
+    "mid": "#5a5c63",
+    "shadow": "#191a1d",
+    "light": "#45474e",
+    "disabled_text": "#7f8084",
+    "primary": {
+      "main": "#2f6fff",
+      "light": "#5a8fff",
+      "dark": "#1a4fcc"
+    },
+    "secondary": {
+      "main": "#6c757d",
+      "light": "#868e96",
+      "dark": "#495057"
+    },
+    "success": {
+      "main": "#4caf50",
+      "light": "#81c784",
+      "dark": "#388e3c"
+    },
+    "warning": {
+      "main": "#ff9800",
+      "light": "#ffb74d",
+      "dark": "#f57c00"
+    },
+    "danger": {
+      "main": "#f44336",
+      "light": "#ef5350",
+      "dark": "#c62828"
+    },
+    "info": {
+      "main": "#2196f3",
+      "light": "#64b5f6",
+      "dark": "#1976d2"
+    }
+  },
+  "dimensions": {
+    "border_radius": 6,
+    "padding": 8,
+    "padding_small": 4,
+    "padding_large": 12,
+    "spacing": 8,
+    "min_button_height": 32,
+    "font_family": "Segoe UI, Yu Gothic UI, Meiryo, sans-serif",
+    "font_size": 10,
+    "font_size_small": 9,
+    "font_size_large": 12,
+    "icon_size": 20,
+    "icon_size_small": 16,
+    "icon_size_large": 24
+  },
+  "components": {
+    "card": {
+      "background": "#2b2d31",
+      "border": "#5a5c63",
+      "shadow": "rgba(0, 0, 0, 0.3)",
+      "hover_shadow": "rgba(0, 0, 0, 0.5)"
+    },
+    "input": {
+      "background": "#2b2d31",
+      "border": "#5a5c63",
+      "focus_border": "#2f6fff",
+      "placeholder": "#7f8084"
+    },
+    "button": {
+      "default": {
+        "background": "#35363a",
+        "text": "#ffffff",
+        "border": "#5a5c63",
+        "hover_background": "#45474e"
+      },
+      "primary": {
+        "background": "#2f6fff",
+        "text": "#ffffff",
+        "border": "transparent",
+        "hover_background": "#5a8fff"
+      }
+    }
+  }
+}
