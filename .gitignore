@@ -12,12 +12,12 @@ venv/
 env/
 
 # Database files
-*.db
-*.db-wal
-*.db-shm
+data/*.db
+data/*.db-wal
+data/*.db-shm
 
 # Logs
-*.log
+logs/*.log
 
 # Testing
 .coverage

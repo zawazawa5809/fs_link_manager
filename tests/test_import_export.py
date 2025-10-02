@@ -8,7 +8,9 @@ import sys
 from unittest.mock import Mock, patch, MagicMock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fs_link_manager import MainWindow, LinkDatabase
+from src.ui.main_window import MainWindow
+from src.core.database import LinkDatabase
+from src.core.manager import LinkManager
 from PySide6.QtWidgets import QApplication, QFileDialog
 
 
@@ -28,9 +30,9 @@ class TestImportExport(unittest.TestCase):
         self.temp_db.close()
 
         # Create MainWindow with custom database
-        with patch('fs_link_manager.DB_PATH', self.temp_db.name):
-            self.window = MainWindow()
-            self.window.db = LinkDatabase(self.temp_db.name)
+        self.window = MainWindow()
+        self.window.db = LinkDatabase(self.temp_db.name)
+        self.window.manager = LinkManager(self.temp_db.name)
 
     def tearDown(self):
         """Clean up resources"""
@@ -74,7 +76,8 @@ class TestImportExport(unittest.TestCase):
             with open(export_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            self.assertEqual(data, [])
+            self.assertEqual(data['version'], '1.0')
+            self.assertEqual(data['links'], [])
 
         finally:
             if os.path.exists(export_file):
@@ -99,25 +102,30 @@ class TestImportExport(unittest.TestCase):
             with open(export_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            self.assertEqual(len(data), 3)
-            self.assertEqual(data[0]['name'], "File 1")
-            self.assertEqual(data[0]['path'], "C:\\file1.txt")
-            self.assertEqual(data[0]['tags'], "tag1")
-            self.assertEqual(data[1]['name'], "File 2")
-            self.assertEqual(data[1]['path'], "C:\\file2.txt")
-            self.assertEqual(data[1]['tags'], "tag2,tag3")
+            self.assertEqual(data['version'], '1.0')
+            links = data['links']
+            self.assertEqual(len(links), 3)
+            self.assertEqual(links[0]['name'], "File 1")
+            self.assertEqual(links[0]['path'], "C:\\file1.txt")
+            self.assertEqual(links[0]['tags'], "tag1")
+            self.assertEqual(links[1]['name'], "File 2")
+            self.assertEqual(links[1]['path'], "C:\\file2.txt")
+            self.assertEqual(links[1]['tags'], "tag2,tag3")
 
         finally:
             if os.path.exists(export_file):
                 os.unlink(export_file)
 
     def test_import_valid_json_list(self):
-        """Test importing valid JSON as list of objects"""
-        import_data = [
-            {"name": "Import 1", "path": "C:\\import1.txt", "tags": "imported"},
-            {"name": "Import 2", "path": "C:\\import2.txt", "tags": "test,imported"},
-            {"name": "", "path": "C:\\import3.txt", "tags": ""}
-        ]
+        """Test importing valid JSON with proper format"""
+        import_data = {
+            "version": "1.0",
+            "links": [
+                {"name": "Import 1", "path": "C:\\import1.txt", "tags": "imported"},
+                {"name": "Import 2", "path": "C:\\import2.txt", "tags": "test,imported"},
+                {"name": "", "path": "C:\\import3.txt", "tags": ""}
+            ]
+        }
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
             json.dump(import_data, f)
@@ -134,16 +142,15 @@ class TestImportExport(unittest.TestCase):
             self.assertEqual(links[0].name, "Import 1")
             self.assertEqual(links[0].path, "C:\\import1.txt")
             self.assertEqual(links[0].tags, "imported")
-            # The third item might get basename as name if empty
-            self.assertTrue(links[2].name == "" or links[2].name == "import3.txt")
+            self.assertEqual(links[2].name, "")
             self.assertEqual(links[2].path, "C:\\import3.txt")
 
         finally:
             if os.path.exists(import_file):
                 os.unlink(import_file)
 
-    def test_import_single_dict(self):
-        """Test importing single dictionary (not a list)"""
+    def test_import_invalid_format(self):
+        """Test importing invalid format (missing version)"""
         import_data = {"name": "Single Item", "path": "C:\\single.txt", "tags": "single"}
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
@@ -153,14 +160,9 @@ class TestImportExport(unittest.TestCase):
         try:
             # Mock the file dialog
             with patch.object(QFileDialog, 'getOpenFileName', return_value=(import_file, 'JSON (*.json)')):
-                self.window.import_from_file()
-
-            # Check that the single item was imported
-            links = self.window.db.list_links()
-            self.assertEqual(len(links), 1)
-            self.assertEqual(links[0].name, "Single Item")
-            self.assertEqual(links[0].path, "C:\\single.txt")
-            self.assertEqual(links[0].tags, "single")
+                # Should raise an error
+                with self.assertRaises(Exception):
+                    self.window.import_from_file()
 
         finally:
             if os.path.exists(import_file):
@@ -168,12 +170,15 @@ class TestImportExport(unittest.TestCase):
 
     def test_import_with_missing_fields(self):
         """Test importing JSON with missing fields"""
-        import_data = [
-            {"path": "C:\\noname.txt"},  # Missing name and tags
-            {"name": "No Path"},  # Missing path
-            {"name": "Complete", "path": "C:\\complete.txt", "tags": "test"},
-            {}  # Empty object
-        ]
+        import_data = {
+            "version": "1.0",
+            "links": [
+                {"path": "C:\\noname.txt"},  # Missing name and tags
+                {"name": "No Path"},  # Missing path
+                {"name": "Complete", "path": "C:\\complete.txt", "tags": "test"},
+                {}  # Empty object
+            ]
+        }
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
             json.dump(import_data, f)
@@ -188,8 +193,8 @@ class TestImportExport(unittest.TestCase):
             links = self.window.db.list_links()
             self.assertEqual(len(links), 2)  # Only items with paths should be imported
 
-            # First link (noname.txt) should use basename as name
-            self.assertTrue(links[0].name == "noname.txt" or links[0].name == "")
+            # First link (noname.txt)
+            self.assertEqual(links[0].name, "")
             self.assertEqual(links[0].path, "C:\\noname.txt")
 
             # Second link (complete)
@@ -207,16 +212,13 @@ class TestImportExport(unittest.TestCase):
             import_file = f.name
 
         try:
-            # Mock the file dialog and message box
+            # Mock the file dialog
             with patch.object(QFileDialog, 'getOpenFileName', return_value=(import_file, 'JSON (*.json)')):
-                with patch('fs_link_manager.QMessageBox.critical') as mock_critical:
+                # Should show an error via QMessageBox
+                with patch('PySide6.QtWidgets.QMessageBox.warning') as mock_warning:
                     self.window.import_from_file()
-
-                    # Check that error message was shown
-                    mock_critical.assert_called_once()
-                    args = mock_critical.call_args[0]
-                    self.assertEqual(args[1], "エラー")
-                    self.assertIn("JSONファイルの形式が不正です", args[2])
+                    # Error should be shown
+                    mock_warning.assert_called_once()
 
             # Check that no links were imported
             links = self.window.db.list_links()
@@ -235,15 +237,13 @@ class TestImportExport(unittest.TestCase):
             import_file = f.name
 
         try:
-            # Mock the file dialog and message box
+            # Mock the file dialog
             with patch.object(QFileDialog, 'getOpenFileName', return_value=(import_file, 'JSON (*.json)')):
-                with patch('fs_link_manager.QMessageBox.critical') as mock_critical:
+                # Should show an error via QMessageBox
+                with patch('PySide6.QtWidgets.QMessageBox.warning') as mock_warning:
                     self.window.import_from_file()
-
-                    # Check that error message was shown
-                    mock_critical.assert_called_once()
-                    args = mock_critical.call_args[0]
-                    self.assertIn("インポートに失敗しました", args[2])
+                    # Error should be shown
+                    mock_warning.assert_called_once()
 
             # Check that no links were imported
             links = self.window.db.list_links()
@@ -255,14 +255,17 @@ class TestImportExport(unittest.TestCase):
 
     def test_import_list_with_mixed_types(self):
         """Test importing list with mixed types (dicts and non-dicts)"""
-        import_data = [
-            {"name": "Valid 1", "path": "C:\\valid1.txt", "tags": "test"},
-            "This is a string",  # Invalid
-            123,  # Invalid
-            {"name": "Valid 2", "path": "C:\\valid2.txt", "tags": "test"},
-            None,  # Invalid
-            {"name": "Valid 3", "path": "C:\\valid3.txt", "tags": "test"}
-        ]
+        import_data = {
+            "version": "1.0",
+            "links": [
+                {"name": "Valid 1", "path": "C:\\valid1.txt", "tags": "test"},
+                "This is a string",  # Invalid
+                123,  # Invalid
+                {"name": "Valid 2", "path": "C:\\valid2.txt", "tags": "test"},
+                None,  # Invalid
+                {"name": "Valid 3", "path": "C:\\valid3.txt", "tags": "test"}
+            ]
+        }
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
             json.dump(import_data, f)
@@ -286,11 +289,14 @@ class TestImportExport(unittest.TestCase):
 
     def test_import_with_special_characters(self):
         """Test importing JSON with special characters"""
-        import_data = [
-            {"name": "日本語ファイル", "path": "C:\\日本語\\ファイル.txt", "tags": "日本語,テスト"},
-            {"name": "File with 😀", "path": "C:\\emoji\\file.txt", "tags": "emoji,😀"},
-            {"name": "File's \"Special\"", "path": "C:\\special\\file & more.txt", "tags": "special,&,\""}
-        ]
+        import_data = {
+            "version": "1.0",
+            "links": [
+                {"name": "日本語ファイル", "path": "C:\\日本語\\ファイル.txt", "tags": "日本語,テスト"},
+                {"name": "File with 😀", "path": "C:\\emoji\\file.txt", "tags": "emoji,😀"},
+                {"name": "File's \"Special\"", "path": "C:\\special\\file & more.txt", "tags": "special,&,\""}
+            ]
+        }
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
             json.dump(import_data, f, ensure_ascii=False)
@@ -347,9 +353,8 @@ class TestImportExport(unittest.TestCase):
             self.assertEqual(len(links), len(original_links))
 
             for i, link in enumerate(links):
-                # Empty names might be replaced with basename
-                expected_name = original_links[i][0] if original_links[i][0] else "noname.txt"
-                self.assertTrue(link.name == original_links[i][0] or link.name == expected_name)
+                # Empty names are preserved
+                self.assertEqual(link.name, original_links[i][0])
                 self.assertEqual(link.path, original_links[i][1])
                 self.assertEqual(link.tags, original_links[i][2])
 

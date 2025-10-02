@@ -102,7 +102,8 @@ class WidgetFactory:
             )
             field.setValidator(QRegularExpressionValidator(email_regex))
         elif input_type == "search":
-            field.setPlaceholderText(f"🔍 {placeholder}" if placeholder else "🔍 検索")
+            # Don't use emoji for search as it may not render properly on all systems
+            field.setPlaceholderText(placeholder if placeholder else "検索")
 
         # 統一されたスタイル適用
         field.setProperty("class", "input-field")

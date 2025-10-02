@@ -8,7 +8,8 @@ from datetime import datetime
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fs_link_manager import LinkDatabase, LinkRecord
+from src.core.database import LinkDatabase
+from src.core.models import LinkRecord
 
 
 class TestLinkDatabase(unittest.TestCase):

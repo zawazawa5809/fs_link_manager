@@ -39,7 +39,7 @@ class ThemeManager(QObject):
 
     def _load_theme_definitions(self):
         """テーマ定義をJSONから読み込み"""
-        theme_dir = Path("themes")
+        theme_dir = Path(__file__).parent / "data"
         theme_dir.mkdir(exist_ok=True)
 
         # デフォルトテーマを作成
@@ -91,11 +91,11 @@ class ThemeManager(QObject):
                 'padding_small': 4,
                 'padding_large': 12,
                 'spacing': 8,
-                'min_button_height': 32,
-                'font_family': 'Segoe UI',
-                'font_size': 10,
-                'font_size_small': 9,
-                'font_size_large': 12,
+                'min_button_height': 36,
+                'font_family': 'Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
+                'font_size': 13,
+                'font_size_small': 11,
+                'font_size_large': 16,
                 'icon_size': 20,
                 'icon_size_small': 16,
                 'icon_size_large': 24
@@ -137,11 +137,11 @@ class ThemeManager(QObject):
                 'padding_small': 4,
                 'padding_large': 12,
                 'spacing': 8,
-                'min_button_height': 32,
-                'font_family': 'Segoe UI',
-                'font_size': 10,
-                'font_size_small': 9,
-                'font_size_large': 12,
+                'min_button_height': 36,
+                'font_family': 'Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
+                'font_size': 13,
+                'font_size_small': 11,
+                'font_size_large': 16,
                 'icon_size': 20,
                 'icon_size_small': 16,
                 'icon_size_large': 24
@@ -183,11 +183,11 @@ class ThemeManager(QObject):
                 'padding_small': 6,
                 'padding_large': 14,
                 'spacing': 10,
-                'min_button_height': 36,
-                'font_family': 'Segoe UI',
-                'font_size': 11,
-                'font_size_small': 10,
-                'font_size_large': 14,
+                'min_button_height': 40,
+                'font_family': 'Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
+                'font_size': 14,
+                'font_size_small': 12,
+                'font_size_large': 17,
                 'icon_size': 24,
                 'icon_size_small': 20,
                 'icon_size_large': 28
