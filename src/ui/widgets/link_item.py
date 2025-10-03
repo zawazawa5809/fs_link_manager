@@ -8,21 +8,18 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QStyledItemDelegate, QStyle, QApplication
 
 from ...themes.manager import ThemeManager
+from ...themes.constants import VisualConstants as VC, FileTypeIcons as FI
 
 
 class ThemedListDelegate(QStyledItemDelegate):
     """Theme-aware list view delegate"""
 
-    # Color constants for theme variations
-    ICON_BG_LIGHTNESS = 180  # Lightness factor for icon background
-    HIGHLIGHT_LIGHTNESS = 150  # Lightness factor for selected item background
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.theme_manager = ThemeManager()
-        self.item_height = 90
-        self.padding = 12
-        self.icon_size = 48
+        self.item_height = VC.LIST_ITEM_HEIGHT
+        self.padding = VC.LIST_PADDING
+        self.icon_size = VC.LIST_ICON_SIZE
 
     def paint(self, painter: QPainter, option, index):
         """Paint the list item using theme colors"""
@@ -43,7 +40,7 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw background
         if is_selected:
-            painter.fillRect(rect, palette.color(QPalette.Highlight).lighter(self.HIGHLIGHT_LIGHTNESS))
+            painter.fillRect(rect, palette.color(QPalette.Highlight).lighter(VC.HIGHLIGHT_LIGHTNESS))
             painter.setPen(QPen(palette.color(QPalette.Highlight), 1))
             painter.drawRect(rect.adjusted(0, 0, -1, -1))
         elif is_hover:
@@ -59,21 +56,21 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw file type icon
         if os.path.isdir(record.path):
-            emoji = "📁"
+            emoji = FI.FOLDER
             icon_color = self.theme_manager.get_color('primary')
         else:
-            emoji = "📄"
+            emoji = FI.FILE
             icon_color = palette.color(QPalette.ButtonText)
 
         # Draw icon background
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QBrush(icon_color.lighter(self.ICON_BG_LIGHTNESS)))
+        painter.setBrush(QBrush(icon_color.lighter(VC.ICON_BG_LIGHTNESS)))
         icon_bg_rect = icon_rect.adjusted(4, 4, -4, -4)
-        painter.drawRoundedRect(icon_bg_rect, 6, 6)
+        painter.drawRoundedRect(icon_bg_rect, VC.BORDER_RADIUS_SMALL, VC.BORDER_RADIUS_SMALL)
 
         # Draw emoji
         font = painter.font()
-        font.setPointSize(18)
+        font.setPointSize(VC.FONT_ICON_LIST)
         painter.setFont(font)
         text_color_role = QPalette.HighlightedText if is_selected else QPalette.WindowText
         painter.setPen(palette.color(text_color_role))
@@ -89,7 +86,7 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw title
         title_font = painter.font()
-        title_font.setPointSize(14)
+        title_font.setPointSize(VC.FONT_TITLE)
         title_font.setWeight(QFont.Weight.DemiBold)  # SemiBold (600)
         painter.setFont(title_font)
         painter.setPen(palette.color(text_color_role))
@@ -103,7 +100,7 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw path
         path_font = painter.font()
-        path_font.setPointSize(11)
+        path_font.setPointSize(VC.FONT_PATH)
         path_font.setWeight(QFont.Weight.Medium)  # Medium (500)
         painter.setFont(path_font)
         painter.setPen(palette.color(QPalette.Mid))
@@ -129,17 +126,13 @@ class ThemedListDelegate(QStyledItemDelegate):
 class ThemedCardDelegate(QStyledItemDelegate):
     """Theme-aware card view delegate"""
 
-    # Color constants for theme variations
-    ICON_BG_LIGHTNESS = 180  # Lightness factor for icon background
-    HIGHLIGHT_BORDER_DARKNESS = 110  # Darkness factor for selected border
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.theme_manager = ThemeManager()
-        self.card_width = 200
-        self.card_height = 220
-        self.padding = 16
-        self.icon_size = 64
+        self.card_width = VC.CARD_WIDTH
+        self.card_height = VC.CARD_HEIGHT
+        self.padding = VC.CARD_PADDING
+        self.icon_size = VC.CARD_ICON_SIZE
 
     def paint(self, painter: QPainter, option, index):
         """Paint the card item using theme colors"""
@@ -169,13 +162,13 @@ class ThemedCardDelegate(QStyledItemDelegate):
 
         # Draw card background using palette colors
         card_path = QPainterPath()
-        card_path.addRoundedRect(QRectF(card_rect), 10, 10)
+        card_path.addRoundedRect(QRectF(card_rect), VC.BORDER_RADIUS_MEDIUM, VC.BORDER_RADIUS_MEDIUM)
 
         # Use palette colors
         palette = QApplication.palette()
         if is_selected:
             bg_color = palette.color(QPalette.Highlight)
-            painter.setPen(QPen(palette.color(QPalette.Highlight).darker(self.HIGHLIGHT_BORDER_DARKNESS), 2))
+            painter.setPen(QPen(palette.color(QPalette.Highlight).darker(VC.HIGHLIGHT_BORDER_DARKNESS), 2))
         elif is_hover:
             bg_color = palette.color(QPalette.AlternateBase)
             painter.setPen(QPen(palette.color(QPalette.Mid), 1))
@@ -199,21 +192,21 @@ class ThemedCardDelegate(QStyledItemDelegate):
 
         # Draw file type icon
         if os.path.isdir(record.path):
-            emoji = "📁"
+            emoji = FI.FOLDER
             icon_color = self.theme_manager.get_color('primary')
         else:
             ext = os.path.splitext(record.path)[1].lower()
-            emoji = "📄"
+            emoji = FI.FILE
             icon_color = palette.color(QPalette.ButtonText)
 
         # Draw icon background
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QBrush(icon_color.lighter(self.ICON_BG_LIGHTNESS)))
+        painter.setBrush(QBrush(icon_color.lighter(VC.ICON_BG_LIGHTNESS)))
         painter.drawEllipse(icon_rect.adjusted(8, 8, -8, -8))
 
         # Draw emoji
         font = painter.font()
-        font.setPointSize(24)
+        font.setPointSize(VC.FONT_ICON_CARD)
         painter.setFont(font)
         text_color_role = QPalette.HighlightedText if is_selected else QPalette.WindowText
         painter.setPen(palette.color(text_color_role))
@@ -228,7 +221,7 @@ class ThemedCardDelegate(QStyledItemDelegate):
         )
 
         title_font = painter.font()
-        title_font.setPointSize(13)
+        title_font.setPointSize(VC.FONT_CARD_TITLE)
         title_font.setWeight(QFont.Weight.DemiBold)  # SemiBold (600)
         painter.setFont(title_font)
         painter.setPen(palette.color(text_color_role))
@@ -248,7 +241,7 @@ class ThemedCardDelegate(QStyledItemDelegate):
         )
 
         path_font = painter.font()
-        path_font.setPointSize(10)
+        path_font.setPointSize(VC.FONT_CARD_PATH)
         path_font.setWeight(QFont.Weight.Medium)  # Medium (500)
         painter.setFont(path_font)
         painter.setPen(palette.color(QPalette.Mid))
@@ -268,7 +261,7 @@ class ThemedCardDelegate(QStyledItemDelegate):
             )
 
             tags_font = painter.font()
-            tags_font.setPointSize(10)
+            tags_font.setPointSize(VC.FONT_CARD_TAGS)
             tags_font.setWeight(QFont.Weight.Medium)  # Medium (500)
             tags_font.setItalic(True)
             painter.setFont(tags_font)

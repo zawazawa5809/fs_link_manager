@@ -4,13 +4,10 @@ Creates themed widgets with consistent styling
 """
 
 from PySide6.QtWidgets import (
-    QPushButton, QLineEdit, QLabel, QComboBox,
-    QCheckBox, QRadioButton, QGroupBox, QFrame,
-    QVBoxLayout, QHBoxLayout, QWidget, QTextEdit,
-    QListWidget, QListWidgetItem, QToolButton
+    QPushButton, QLineEdit, QLabel, QComboBox, QFrame, QWidget, QToolButton
 )
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QIcon, QPixmap, QFont
+from PySide6.QtGui import QIcon
 from typing import Optional, List
 
 
@@ -154,166 +151,6 @@ class WidgetFactory:
         return combo
 
     @staticmethod
-    def create_card_widget(
-        title: str = "",
-        content: Optional[QWidget] = None,
-        actions: Optional[List[QPushButton]] = None,
-        collapsible: bool = False,
-        parent: Optional[QWidget] = None
-    ) -> QFrame:
-        """カード型コンテナウィジェット"""
-        card = QFrame(parent)
-        card.setProperty("class", "card-widget")
-        card.setFrameStyle(QFrame.Box)
-
-        layout = QVBoxLayout(card)
-        layout.setSpacing(12)
-        layout.setContentsMargins(16, 16, 16, 16)
-
-        # タイトル
-        if title:
-            title_layout = QHBoxLayout()
-
-            title_label = WidgetFactory.create_label(title, "heading2")
-            title_label.setProperty("class", "card-title")
-            title_layout.addWidget(title_label)
-
-            if collapsible:
-                collapse_btn = QToolButton()
-                collapse_btn.setArrowType(Qt.DownArrow)
-                collapse_btn.setProperty("class", "collapse-button")
-                title_layout.addWidget(collapse_btn)
-
-            title_layout.addStretch()
-            layout.addLayout(title_layout)
-
-            # セパレータ
-            separator = QFrame()
-            separator.setFrameShape(QFrame.HLine)
-            separator.setProperty("class", "card-separator")
-            layout.addWidget(separator)
-
-        # コンテンツ
-        if content:
-            layout.addWidget(content)
-
-        # アクションボタン
-        if actions:
-            action_layout = QHBoxLayout()
-            action_layout.addStretch()
-            for button in actions:
-                action_layout.addWidget(button)
-                action_layout.addSpacing(8)
-            layout.addLayout(action_layout)
-
-        return card
-
-    @staticmethod
-    def create_form_group(
-        label_text: str,
-        widget: QWidget,
-        help_text: str = "",
-        required: bool = False,
-        parent: Optional[QWidget] = None
-    ) -> QWidget:
-        """フォームグループ（ラベル付きウィジェット）を作成"""
-        container = QWidget(parent)
-        layout = QVBoxLayout(container)
-        layout.setSpacing(4)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        # ラベル
-        label_str = label_text
-        if required:
-            label_str += " *"
-        label = WidgetFactory.create_label(label_str)
-        label.setProperty("class", "form-label")
-        layout.addWidget(label)
-
-        # ウィジェット
-        layout.addWidget(widget)
-
-        # ヘルプテキスト
-        if help_text:
-            help_label = WidgetFactory.create_label(help_text, "caption")
-            help_label.setProperty("class", "form-help")
-            layout.addWidget(help_label)
-
-        return container
-
-    @staticmethod
-    def create_section_widget(
-        title: str,
-        widgets: List[QWidget],
-        parent: Optional[QWidget] = None
-    ) -> QGroupBox:
-        """セクション（グループボックス）を作成"""
-        group = QGroupBox(title, parent)
-        group.setProperty("class", "section-widget")
-
-        layout = QVBoxLayout(group)
-        layout.setSpacing(8)
-
-        for widget in widgets:
-            layout.addWidget(widget)
-
-        return group
-
-    @staticmethod
-    def create_list_widget(
-        items: Optional[List[str]] = None,
-        parent: Optional[QWidget] = None
-    ) -> QListWidget:
-        """スタイル付きリストウィジェットを作成"""
-        list_widget = QListWidget(parent)
-        list_widget.setProperty("class", "list-widget")
-        list_widget.setAlternatingRowColors(True)
-
-        if items:
-            for item in items:
-                list_widget.addItem(item)
-
-        return list_widget
-
-    @staticmethod
-    def create_status_label(
-        text: str,
-        status_type: str = "info",
-        parent: Optional[QWidget] = None
-    ) -> QLabel:
-        """ステータス表示用ラベルを作成"""
-        label = QLabel(text, parent)
-
-        # ステータスタイプ別のアイコンとスタイル
-        status_config = {
-            "info": ("ℹ️", "status-info"),
-            "success": ("✅", "status-success"),
-            "warning": ("⚠️", "status-warning"),
-            "error": ("❌", "status-error"),
-            "loading": ("⏳", "status-loading")
-        }
-
-        if status_type in status_config:
-            icon, style_class = status_config[status_type]
-            label.setText(f"{icon} {text}")
-            label.setProperty("class", style_class)
-
-        return label
-
-    @staticmethod
-    def create_icon_label(
-        icon: QIcon,
-        size: QSize = QSize(32, 32),
-        parent: Optional[QWidget] = None
-    ) -> QLabel:
-        """アイコン表示用ラベルを作成"""
-        label = QLabel(parent)
-        pixmap = icon.pixmap(size)
-        label.setPixmap(pixmap)
-        label.setAlignment(Qt.AlignCenter)
-        return label
-
-    @staticmethod
     def create_separator(
         orientation: Qt.Orientation = Qt.Horizontal,
         parent: Optional[QWidget] = None
@@ -327,24 +164,6 @@ class WidgetFactory:
         separator.setFrameShadow(QFrame.Sunken)
         separator.setProperty("class", "separator")
         return separator
-
-    @staticmethod
-    def create_text_editor(
-        placeholder: str = "",
-        read_only: bool = False,
-        parent: Optional[QWidget] = None
-    ) -> QTextEdit:
-        """スタイル付きテキストエディタを作成"""
-        editor = QTextEdit(parent)
-        editor.setPlaceholderText(placeholder)
-        editor.setReadOnly(read_only)
-        editor.setProperty("class", "text-editor")
-
-        # フォント設定
-        font = QFont("Consolas", 10)
-        editor.setFont(font)
-
-        return editor
 
     @staticmethod
     def apply_shadow_effect(
@@ -362,23 +181,3 @@ class WidgetFactory:
         shadow.setColor(QColor(*color))
         shadow.setOffset(*offset)
         widget.setGraphicsEffect(shadow)
-
-    @staticmethod
-    def create_action_bar(
-        actions: List[tuple],  # [(text, icon, callback), ...]
-        parent: Optional[QWidget] = None
-    ) -> QWidget:
-        """アクションバー（ボタングループ）を作成"""
-        container = QWidget(parent)
-        layout = QHBoxLayout(container)
-        layout.setSpacing(4)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        for text, icon, callback in actions:
-            button = WidgetFactory.create_tool_button(text, icon)
-            if callback:
-                button.clicked.connect(callback)
-            layout.addWidget(button)
-
-        layout.addStretch()
-        return container

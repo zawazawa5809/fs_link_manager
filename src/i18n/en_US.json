@@ -1,0 +1,64 @@
+{
+  "app": {
+    "title": "FS Link Manager"
+  },
+  "toolbar": {
+    "view_label": "View:",
+    "add_tooltip": "Add file or folder",
+    "import": "Import",
+    "export": "Export",
+    "open": "Open",
+    "edit": "Edit",
+    "delete": "Delete",
+    "theme_label": "Theme:"
+  },
+  "view_modes": {
+    "list": "List",
+    "grid": "Grid"
+  },
+  "themes": {
+    "dark_professional": "Dark",
+    "light_professional": "Light",
+    "dark_high_contrast": "High Contrast"
+  },
+  "search": {
+    "placeholder": "Search (name / path / tags)"
+  },
+  "dialogs": {
+    "select_link_target": "Select Link Target",
+    "edit_name": "Edit Name",
+    "display_name": "Display Name:",
+    "edit_tags": "Edit Tags",
+    "tags_hint": "Comma-separated tags:",
+    "confirm": "Confirm",
+    "delete_confirm": "Delete selected item?",
+    "import_file_select": "Select Import File",
+    "export_file_select": "Select Export Destination",
+    "import_error": "Import Error",
+    "export_error": "Export Error",
+    "error_title": "Error",
+    "database_error": "Database Error",
+    "file_error": "File Operation Error",
+    "validation_error": "Validation Error",
+    "unexpected_error": "Unexpected Error",
+    "warning": "Warning",
+    "information": "Information"
+  },
+  "context_menu": {
+    "open": "Open",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add..."
+  },
+  "status": {
+    "items_count": "{count} items",
+    "items_added": "{count} items added",
+    "item_deleted": "Item deleted",
+    "links_imported": "{count} links imported",
+    "export_completed": "Export completed",
+    "theme_changed": "Theme changed: {theme}"
+  },
+  "tags": {
+    "folder": "Folder"
+  }
+}

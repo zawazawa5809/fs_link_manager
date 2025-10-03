@@ -1,48 +1,21 @@
 """Main window implementation for FS Link Manager"""
 
-import os
-from typing import List, Optional
-from pathlib import Path
-
-from PySide6.QtCore import Qt, Slot, QModelIndex, QAbstractListModel
+from typing import Optional
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QFileDialog, QMessageBox, QMenu, QToolBar, QStatusBar,
-    QInputDialog, QSizePolicy, QStyle
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QMenu, QToolBar, QStatusBar, QSizePolicy, QStyle
 )
 
 from ..core import LinkDatabase, LinkRecord, LinkManager
 from ..themes import ThemeManager
+from ..i18n import tr
 from .widgets import LinkList
 from .widgets.link_list import ViewMode
 from .widgets.factory import WidgetFactory
-
-
-class LinkListModel(QAbstractListModel):
-    """Model for link list view"""
-
-    def __init__(self, records):
-        super().__init__()
-        self.records = records
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.records)
-
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            return None
-
-        record = self.records[index.row()]
-
-        if role == Qt.DisplayRole:
-            return record.display_text()
-        elif role == Qt.UserRole:
-            return record.id
-        elif role == Qt.UserRole + 1:
-            return record
-
-        return None
+from .models import LinkListModel
+from .controllers import LinkController, ImportExportController
 
 
 class MainWindow(QMainWindow):
@@ -50,7 +23,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FS Link Manager")
+        self.setWindowTitle(tr("app.title"))
         self.resize(1100, 750)
 
         # Get theme manager instance (already initialized in main.py)
@@ -60,8 +33,18 @@ class MainWindow(QMainWindow):
         self.db = LinkDatabase()
         self.manager = LinkManager()
 
+        # Initialize controllers
+        self.link_controller = LinkController(self.db, self.manager, self)
+        self.import_export_controller = ImportExportController(self.manager, self)
+
+        # Initialize model
+        self.model = LinkListModel()
+
         # Create UI
         self._create_ui()
+
+        # Connect controller signals
+        self._connect_controller_signals()
 
         # Load initial data
         self.reload_list()
@@ -75,6 +58,14 @@ class MainWindow(QMainWindow):
         self._create_central_widget()
         self._create_status_bar()
 
+    def _connect_controller_signals(self):
+        """Connect controller signals to UI handlers"""
+        self.link_controller.links_updated.connect(self.reload_list)
+        self.link_controller.status_message.connect(self._show_status_message)
+        self.import_export_controller.import_completed.connect(lambda c: self.reload_list())
+        self.import_export_controller.export_completed.connect(lambda: None)
+        self.import_export_controller.status_message.connect(self._show_status_message)
+
     def _create_toolbar(self):
         """Create toolbar"""
         toolbar = QToolBar("Main")
@@ -87,10 +78,13 @@ class MainWindow(QMainWindow):
         view_layout.setContentsMargins(4, 0, 4, 0)
         view_layout.setSpacing(4)
 
-        view_label = WidgetFactory.create_label("表示:", "default")
+        view_label = WidgetFactory.create_label(tr("toolbar.view_label"), "default")
         view_layout.addWidget(view_label)
 
-        self.view_combo = WidgetFactory.create_combo_box(["リスト", "グリッド"])
+        self.view_combo = WidgetFactory.create_combo_box([
+            tr("view_modes.list"),
+            tr("view_modes.grid")
+        ])
         self.view_combo.currentIndexChanged.connect(self._on_view_mode_changed)
         view_layout.addWidget(self.view_combo)
 
@@ -100,22 +94,22 @@ class MainWindow(QMainWindow):
         # File operations
         add_act = QAction(
             self.style().standardIcon(QStyle.SP_FileDialogNewFolder),
-            "追加", self
+            tr("toolbar.add_tooltip"), self
         )
-        add_act.setToolTip("ファイルまたはフォルダを追加")
+        add_act.setToolTip(tr("toolbar.add_tooltip"))
         add_act.triggered.connect(self.add_link_dialog)
         toolbar.addAction(add_act)
 
         import_act = QAction(
             self.style().standardIcon(QStyle.SP_ArrowDown),
-            "インポート", self
+            tr("toolbar.import"), self
         )
         import_act.triggered.connect(self.import_from_file)
         toolbar.addAction(import_act)
 
         export_act = QAction(
             self.style().standardIcon(QStyle.SP_ArrowUp),
-            "エクスポート", self
+            tr("toolbar.export"), self
         )
         export_act.triggered.connect(self.export_to_file)
         toolbar.addAction(export_act)
@@ -125,21 +119,21 @@ class MainWindow(QMainWindow):
         # Item operations
         open_act = QAction(
             self.style().standardIcon(QStyle.SP_DirOpenIcon),
-            "開く", self
+            tr("toolbar.open"), self
         )
         open_act.triggered.connect(self.open_selected)
         toolbar.addAction(open_act)
 
         edit_act = QAction(
             self.style().standardIcon(QStyle.SP_FileDialogDetailedView),
-            "編集", self
+            tr("toolbar.edit"), self
         )
         edit_act.triggered.connect(self.edit_selected)
         toolbar.addAction(edit_act)
 
         delete_act = QAction(
             self.style().standardIcon(QStyle.SP_TrashIcon),
-            "削除", self
+            tr("toolbar.delete"), self
         )
         delete_act.triggered.connect(self.delete_selected)
         toolbar.addAction(delete_act)
@@ -154,21 +148,16 @@ class MainWindow(QMainWindow):
         theme_layout = QHBoxLayout(theme_widget)
         theme_layout.setContentsMargins(4, 0, 4, 0)
 
-        theme_label = WidgetFactory.create_label("テーマ:", "default")
+        theme_label = WidgetFactory.create_label(tr("toolbar.theme_label"), "default")
         theme_layout.addWidget(theme_label)
 
         # Get available themes
         available_themes = self.theme_manager.get_available_themes()
-        theme_names_map = {
-            'dark_professional': 'ダーク',
-            'light_professional': 'ライト',
-            'dark_high_contrast': 'ハイコントラスト'
-        }
 
         theme_display_names = []
         self.theme_keys = []
         for theme_key in available_themes:
-            display_name = theme_names_map.get(theme_key, theme_key)
+            display_name = tr(f"themes.{theme_key}")
             theme_display_names.append(display_name)
             self.theme_keys.append(theme_key)
 
@@ -191,7 +180,7 @@ class MainWindow(QMainWindow):
 
         # Search bar
         self.search = WidgetFactory.create_input_field(
-            "検索（名前 / パス / タグ）", "search"
+            tr("search.placeholder"), "search"
         )
         self.search.textChanged.connect(self.reload_list)
         layout.addWidget(self.search)
@@ -227,17 +216,21 @@ class MainWindow(QMainWindow):
 
     def on_theme_changed(self, theme_name: str):
         """Handle theme change signal"""
-        self.status_bar.showMessage(f"テーマを変更しました: {theme_name}", 2000)
+        self.status_bar.showMessage(tr("status.theme_changed", theme=theme_name), 2000)
+
+    def _show_status_message(self, message: str, timeout_ms: int):
+        """Show status message"""
+        self.status_bar.showMessage(message, timeout_ms)
 
     def reload_list(self):
         """Reload the list with data"""
         query = self.search.text()
-        records = self.db.list_links(query)
+        records = self.link_controller.search_links(query)
 
-        model = LinkListModel(records)
-        self.list_view.setModel(model)
+        self.model.update_records(records)
+        self.list_view.setModel(self.model)
 
-        self.status_bar.showMessage(f"{len(records)} 件のアイテム")
+        self.status_bar.showMessage(tr("status.items_count", count=len(records)))
 
     def current_record_id(self) -> Optional[int]:
         """Get current selected record ID"""
@@ -252,25 +245,9 @@ class MainWindow(QMainWindow):
         return recs.get(id_)
 
     @Slot(list)
-    def on_links_dropped(self, pairs: List[tuple]):
+    def on_links_dropped(self, pairs):
         """Handle dropped links"""
-        for name, path in pairs:
-            # Auto-generate tags
-            tags = []
-            ext = os.path.splitext(path)[1].lower()
-            if ext:
-                tags.append(ext[1:].upper())
-            if os.path.isdir(path):
-                tags.append("フォルダ")
-
-            self.db.add_link(
-                name=name,
-                path=path,
-                tags=", ".join(tags) if tags else ""
-            )
-
-        self.reload_list()
-        self.status_bar.showMessage(f"{len(pairs)} 件のアイテムを追加しました", 3000)
+        self.link_controller.add_links_from_drops(pairs)
 
     def on_item_double_clicked(self, index):
         """Handle double click on item"""
@@ -279,16 +256,11 @@ class MainWindow(QMainWindow):
 
         record = index.data(Qt.UserRole + 1)
         if record:
-            self.manager.open_in_explorer(record.path)
+            self.link_controller.open_link(record.path)
 
     def add_link_dialog(self):
         """Show dialog to add links"""
-        dlg = QFileDialog(self, "リンク対象を選択")
-        dlg.setFileMode(QFileDialog.ExistingFiles)
-        if dlg.exec():
-            paths = dlg.selectedFiles()
-            pairs = [(os.path.basename(p) or p, p) for p in paths]
-            self.on_links_dropped(pairs)
+        self.link_controller.add_links_from_dialog(self)
 
     def edit_selected(self):
         """Edit selected item"""
@@ -296,37 +268,15 @@ class MainWindow(QMainWindow):
         if id_ is None:
             return
         rec = self.get_record(id_)
-        if not rec:
-            return
-
-        name, ok1 = QInputDialog.getText(
-            self, "名前を編集", "表示名:", text=rec.name
-        )
-        if not ok1:
-            return
-        tags, ok2 = QInputDialog.getText(
-            self, "タグを編集", "カンマ区切りタグ:", text=rec.tags
-        )
-        if not ok2:
-            return
-
-        self.db.update_link(rec.id, name=name, tags=tags)
-        self.reload_list()
+        if rec:
+            self.link_controller.edit_link(rec, self)
 
     def delete_selected(self):
         """Delete selected item"""
         id_ = self.current_record_id()
         if id_ is None:
             return
-
-        reply = QMessageBox.question(
-            self, "確認", "選択したアイテムを削除しますか？",
-            QMessageBox.Yes | QMessageBox.No
-        )
-        if reply == QMessageBox.Yes:
-            self.db.delete_link(id_)
-            self.reload_list()
-            self.status_bar.showMessage("アイテムを削除しました", 2000)
+        self.link_controller.delete_link(id_, self)
 
     def open_selected(self):
         """Open selected item"""
@@ -335,7 +285,7 @@ class MainWindow(QMainWindow):
             return
         rec = self.get_record(id_)
         if rec:
-            self.manager.open_in_explorer(rec.path)
+            self.link_controller.open_link(rec.path)
 
     def open_context_menu(self, pos):
         """Show context menu"""
@@ -343,52 +293,29 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
 
         if index.isValid():
-            open_act = menu.addAction("開く")
+            open_act = menu.addAction(tr("context_menu.open"))
             open_act.triggered.connect(self.open_selected)
 
-            edit_act = menu.addAction("編集")
+            edit_act = menu.addAction(tr("context_menu.edit"))
             edit_act.triggered.connect(self.edit_selected)
 
             menu.addSeparator()
 
-            delete_act = menu.addAction("削除")
+            delete_act = menu.addAction(tr("context_menu.delete"))
             delete_act.triggered.connect(self.delete_selected)
         else:
-            add_act = menu.addAction("追加...")
+            add_act = menu.addAction(tr("context_menu.add"))
             add_act.triggered.connect(self.add_link_dialog)
 
         menu.exec(self.list_view.mapToGlobal(pos))
 
     def import_from_file(self):
         """Import links from JSON file"""
-        path, _ = QFileDialog.getOpenFileName(
-            self, "インポートファイルを選択", "", "JSON files (*.json)"
-        )
-        if not path:
-            return
-
-        try:
-            count = self.manager.import_links(path)
-            self.reload_list()
-            self.status_bar.showMessage(f"{count} 件のリンクをインポートしました", 3000)
-
-        except Exception as e:
-            QMessageBox.warning(self, "インポートエラー", str(e))
+        self.import_export_controller.import_from_file(self)
 
     def export_to_file(self):
         """Export links to JSON file"""
-        path, _ = QFileDialog.getSaveFileName(
-            self, "エクスポート先を選択", "", "JSON files (*.json)"
-        )
-        if not path:
-            return
-
-        try:
-            self.manager.export_links(path)
-            self.status_bar.showMessage("エクスポートが完了しました", 3000)
-
-        except Exception as e:
-            QMessageBox.warning(self, "エクスポートエラー", str(e))
+        self.import_export_controller.export_to_file(self)
 
     def closeEvent(self, event):
         """Handle window close event"""

@@ -266,246 +266,60 @@ class ThemeManager(QObject):
         return palette
 
     def _generate_qss(self, theme: Dict) -> str:
-        """テーマ定義からQSSを生成"""
+        """テーマ定義からQSSを生成（テンプレートベース）"""
         dims = theme.get('dimensions', {})
         colors = theme.get('colors', {})
 
-        qss = f"""
+        # QSSテンプレートを読み込み
+        template_path = Path(__file__).parent / "data" / "base_styles.qss"
+        try:
+            with open(template_path, 'r', encoding='utf-8') as f:
+                qss_template = f.read()
+        except FileNotFoundError:
+            # Fallback to minimal inline template
+            return self._generate_qss_fallback(theme)
+
+        # テンプレート変数を置換
+        replacements = {
+            'font_family': dims.get('font_family', 'Segoe UI'),
+            'font_size': dims.get('font_size', 10),
+            'border_radius': dims.get('border_radius', 4),
+            'border_radius_small': dims.get('border_radius', 4) - 2,
+            'border_radius_card': dims.get('border_radius', 4) * 2,
+            'padding': dims.get('padding', 6),
+            'padding_small': dims.get('padding_small', 4),
+            'padding_large': dims.get('padding_large', 12),
+            'spacing': dims.get('spacing', 6),
+            'min_button_height': dims.get('min_button_height', 24),
+            'font_size_small': dims.get('font_size_small', 9),
+            'font_heading1': dims.get('font_size_large', 12) + 6,
+            'font_heading2': dims.get('font_size_large', 12) + 2,
+            'font_heading3': dims.get('font_size_large', 12),
+            'color_primary': colors.get('primary', '#2196f3'),
+            'color_primary_light': colors.get('primary_light', '#64b5f6'),
+            'color_primary_dark': colors.get('primary_dark', '#1976d2'),
+        }
+
+        # テンプレート変数を置換
+        qss = qss_template
+        for key, value in replacements.items():
+            qss = qss.replace(f'${{{key}}}', str(value))
+
+        return qss
+
+    def _generate_qss_fallback(self, theme: Dict) -> str:
+        """Fallback QSS generation (minimal inline version)"""
+        dims = theme.get('dimensions', {})
+        return f"""
         * {{
             font-family: '{dims.get('font_family', 'Segoe UI')}';
             font-size: {dims.get('font_size', 10)}px;
         }}
-
         QWidget {{
             background-color: palette(window);
             color: palette(window-text);
         }}
-
-        /* 入力フィールド */
-        QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox {{
-            background-color: palette(base);
-            color: palette(text);
-            border: 1px solid palette(mid);
-            border-radius: {dims.get('border_radius', 4)}px;
-            padding: {dims.get('padding', 6)}px;
-        }}
-
-        QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {{
-            border-color: palette(highlight);
-            border-width: 2px;
-        }}
-
-        /* ボタン */
-        QPushButton {{
-            background-color: palette(button);
-            color: palette(button-text);
-            border: 1px solid palette(mid);
-            border-radius: {dims.get('border_radius', 4)}px;
-            padding: {dims.get('padding', 6)}px {dims.get('padding_large', 12)}px;
-            min-height: {dims.get('min_button_height', 24)}px;
-        }}
-
-        QPushButton:hover {{
-            background-color: palette(light);
-        }}
-
-        QPushButton:pressed {{
-            background-color: palette(mid);
-        }}
-
-        QPushButton[class="btn-primary"] {{
-            background-color: {colors.get('primary', '#2196f3')};
-            color: white;
-            border: none;
-        }}
-
-        QPushButton[class="btn-primary"]:hover {{
-            background-color: {colors.get('primary_light', '#64b5f6')};
-        }}
-
-        QPushButton[class="btn-primary"]:pressed {{
-            background-color: {colors.get('primary_dark', '#1976d2')};
-        }}
-
-        /* メニュー */
-        QMenu {{
-            background-color: palette(base);
-            border: 1px solid palette(mid);
-            border-radius: {dims.get('border_radius', 4)}px;
-            padding: 4px;
-        }}
-
-        QMenu::item {{
-            padding: {dims.get('padding', 6)}px 24px;
-            border-radius: {dims.get('border_radius', 4) - 2}px;
-        }}
-
-        QMenu::item:selected {{
-            background-color: palette(highlight);
-            color: palette(highlighted-text);
-        }}
-
-        QMenu::separator {{
-            height: 1px;
-            background-color: palette(mid);
-            margin: 4px 12px;
-        }}
-
-        /* リストビュー */
-        QListView {{
-            background-color: palette(base);
-            border: 1px solid palette(mid);
-            border-radius: {dims.get('border_radius', 4)}px;
-            padding: {dims.get('padding', 6)}px;
-            outline: none;
-        }}
-
-        QListView::item {{
-            border-radius: {dims.get('border_radius', 4) - 2}px;
-            padding: {dims.get('padding_small', 4)}px;
-        }}
-
-        QListView::item:hover {{
-            background-color: palette(alternate-base);
-        }}
-
-        QListView::item:selected {{
-            background-color: palette(highlight);
-            color: palette(highlighted-text);
-        }}
-
-        /* スクロールバー */
-        QScrollBar:vertical {{
-            background-color: palette(base);
-            width: 12px;
-            border: none;
-        }}
-
-        QScrollBar::handle:vertical {{
-            background-color: palette(mid);
-            border-radius: 6px;
-            min-height: 30px;
-        }}
-
-        QScrollBar::handle:vertical:hover {{
-            background-color: palette(light);
-        }}
-
-        QScrollBar:horizontal {{
-            background-color: palette(base);
-            height: 12px;
-            border: none;
-        }}
-
-        QScrollBar::handle:horizontal {{
-            background-color: palette(mid);
-            border-radius: 6px;
-            min-width: 30px;
-        }}
-
-        QScrollBar::handle:horizontal:hover {{
-            background-color: palette(light);
-        }}
-
-        /* コンボボックス */
-        QComboBox {{
-            background-color: palette(button);
-            color: palette(button-text);
-            border: 1px solid palette(mid);
-            border-radius: {dims.get('border_radius', 4)}px;
-            padding: {dims.get('padding', 6)}px;
-            min-height: {dims.get('min_button_height', 24)}px;
-        }}
-
-        QComboBox:hover {{
-            border-color: palette(highlight);
-        }}
-
-        QComboBox::drop-down {{
-            border: none;
-            width: 20px;
-        }}
-
-        QComboBox QAbstractItemView {{
-            background-color: palette(base);
-            border: 1px solid palette(mid);
-            color: palette(text);
-            selection-background-color: palette(highlight);
-            selection-color: palette(highlighted-text);
-        }}
-
-        /* ツールバー */
-        QToolBar {{
-            background-color: palette(window);
-            border: none;
-            border-bottom: 1px solid palette(mid);
-            padding: {dims.get('padding', 6)}px;
-            spacing: {dims.get('spacing', 6)}px;
-        }}
-
-        QToolBar QToolButton {{
-            background-color: transparent;
-            border: none;
-            border-radius: {dims.get('border_radius', 4)}px;
-            padding: {dims.get('padding', 6)}px;
-        }}
-
-        QToolBar QToolButton:hover {{
-            background-color: palette(alternate-base);
-        }}
-
-        QToolBar QToolButton:pressed {{
-            background-color: palette(mid);
-        }}
-
-        /* ステータスバー */
-        QStatusBar {{
-            background-color: palette(window);
-            border-top: 1px solid palette(mid);
-            color: palette(window-text);
-        }}
-
-        /* フレーム */
-        QFrame {{
-            background-color: palette(base);
-            border: 1px solid palette(mid);
-            border-radius: {dims.get('border_radius', 4)}px;
-        }}
-
-        /* カードウィジェット */
-        QFrame[class="card-widget"] {{
-            background-color: palette(base);
-            border: 1px solid palette(mid);
-            border-radius: {dims.get('border_radius', 4) * 2}px;
-            padding: {dims.get('padding_large', 12)}px;
-        }}
-
-        /* ラベル */
-        QLabel[class="heading1"] {{
-            font-size: {dims.get('font_size_large', 12) + 6}px;
-            font-weight: bold;
-            color: palette(window-text);
-        }}
-
-        QLabel[class="heading2"] {{
-            font-size: {dims.get('font_size_large', 12) + 2}px;
-            font-weight: bold;
-            color: palette(window-text);
-        }}
-
-        QLabel[class="heading3"] {{
-            font-size: {dims.get('font_size_large', 12)}px;
-            font-weight: bold;
-            color: palette(window-text);
-        }}
-
-        QLabel[class="caption"] {{
-            font-size: {dims.get('font_size_small', 9)}px;
-            color: palette(mid);
-        }}
         """
-
-        return qss
 
     def _repolish_widgets(self):
         """すべてのウィジェットを再描画"""

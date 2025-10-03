@@ -1,0 +1,64 @@
+{
+  "app": {
+    "title": "FS Link Manager"
+  },
+  "toolbar": {
+    "view_label": "表示:",
+    "add_tooltip": "ファイルまたはフォルダを追加",
+    "import": "インポート",
+    "export": "エクスポート",
+    "open": "開く",
+    "edit": "編集",
+    "delete": "削除",
+    "theme_label": "テーマ:"
+  },
+  "view_modes": {
+    "list": "リスト",
+    "grid": "グリッド"
+  },
+  "themes": {
+    "dark_professional": "ダーク",
+    "light_professional": "ライト",
+    "dark_high_contrast": "ハイコントラスト"
+  },
+  "search": {
+    "placeholder": "検索（名前 / パス / タグ）"
+  },
+  "dialogs": {
+    "select_link_target": "リンク対象を選択",
+    "edit_name": "名前を編集",
+    "display_name": "表示名:",
+    "edit_tags": "タグを編集",
+    "tags_hint": "カンマ区切りタグ:",
+    "confirm": "確認",
+    "delete_confirm": "選択したアイテムを削除しますか？",
+    "import_file_select": "インポートファイルを選択",
+    "export_file_select": "エクスポート先を選択",
+    "import_error": "インポートエラー",
+    "export_error": "エクスポートエラー",
+    "error_title": "エラー",
+    "database_error": "データベースエラー",
+    "file_error": "ファイル操作エラー",
+    "validation_error": "入力エラー",
+    "unexpected_error": "予期しないエラー",
+    "warning": "警告",
+    "information": "情報"
+  },
+  "context_menu": {
+    "open": "開く",
+    "edit": "編集",
+    "delete": "削除",
+    "add": "追加..."
+  },
+  "status": {
+    "items_count": "{count} 件のアイテム",
+    "items_added": "{count} 件のアイテムを追加しました",
+    "item_deleted": "アイテムを削除しました",
+    "links_imported": "{count} 件のリンクをインポートしました",
+    "export_completed": "エクスポートが完了しました",
+    "theme_changed": "テーマを変更しました: {theme}"
+  },
+  "tags": {
+    "folder": "フォルダ"
+  }
+}
