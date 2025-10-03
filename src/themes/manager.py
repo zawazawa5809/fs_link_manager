@@ -92,7 +92,7 @@ class ThemeManager(QObject):
                 'padding_large': 12,
                 'spacing': 8,
                 'min_button_height': 36,
-                'font_family': 'Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
+                'font_family': 'Noto Sans CJK JP, Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
                 'font_size': 13,
                 'font_size_small': 11,
                 'font_size_large': 16,
@@ -138,7 +138,7 @@ class ThemeManager(QObject):
                 'padding_large': 12,
                 'spacing': 8,
                 'min_button_height': 36,
-                'font_family': 'Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
+                'font_family': 'Noto Sans CJK JP, Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
                 'font_size': 13,
                 'font_size_small': 11,
                 'font_size_large': 16,
@@ -184,7 +184,7 @@ class ThemeManager(QObject):
                 'padding_large': 14,
                 'spacing': 10,
                 'min_button_height': 40,
-                'font_family': 'Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
+                'font_family': 'Noto Sans CJK JP, Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
                 'font_size': 14,
                 'font_size_small': 12,
                 'font_size_large': 17,
@@ -322,16 +322,30 @@ class ThemeManager(QObject):
         """
 
     def _repolish_widgets(self):
-        """すべてのウィジェットを再描画"""
-        for widget in self.app.allWidgets():
-            widget.style().unpolish(widget)
-            widget.style().polish(widget)
-            # Check if widget has update method that takes no arguments
-            try:
-                widget.update()
-            except TypeError:
-                # Some widgets might require arguments for update
-                pass
+        """すべてのウィジェットを再描画（最適化版）"""
+        # トップレベルウィジェットのみ処理し、カスケードさせる
+        for widget in self.app.topLevelWidgets():
+            if widget.isVisible():
+                self._repolish_widget_tree(widget)
+
+    def _repolish_widget_tree(self, widget: QWidget):
+        """ウィジェットツリーを再帰的に再描画"""
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        try:
+            widget.update()
+        except TypeError:
+            pass
+
+        # 子ウィジェットも処理（visible のみ）
+        for child in widget.findChildren(QWidget):
+            if child.isVisible():
+                child.style().unpolish(child)
+                child.style().polish(child)
+                try:
+                    child.update()
+                except TypeError:
+                    pass
 
     def get_current_theme(self) -> Optional[str]:
         """現在のテーマ名を取得"""

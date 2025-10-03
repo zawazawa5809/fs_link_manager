@@ -16,24 +16,59 @@ class LinkManager:
         self.db = LinkDatabase(db_path)
 
     def import_links(self, file_path: str) -> int:
-        """Import links from a JSON file"""
+        """Import links from a JSON file with validation"""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        MAX_IMPORT_SIZE = 10 * 1024 * 1024  # 10MB制限
+
+        # ファイルサイズチェック
+        file_size = os.path.getsize(file_path)
+        if file_size > MAX_IMPORT_SIZE:
+            raise ValueError(f"Import file too large (max {MAX_IMPORT_SIZE/1024/1024}MB)")
+
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        if not isinstance(data, dict) or 'version' not in data:
-            raise ValueError("Invalid import file format")
+        # バリデーション
+        if not isinstance(data, dict):
+            raise ValueError("Invalid import file format: expected dict")
+        if 'version' not in data:
+            raise ValueError("Invalid import file format: missing version")
+
+        version = data['version']
+        if version not in ['1.0']:  # サポートバージョンリスト
+            raise ValueError(f"Unsupported version: {version}")
 
         links = data.get('links', [])
-        count = 0
+        if not isinstance(links, list):
+            raise ValueError("Invalid import file format: links must be a list")
 
-        for link in links:
-            if 'path' in link:
-                self.db.add_link(
-                    name=link.get('name', ''),
-                    path=link['path'],
-                    tags=link.get('tags', '')
-                )
-                count += 1
+        count = 0
+        errors = []
+
+        # トランザクションを使用
+        with self.db.transaction():
+            for idx, link in enumerate(links):
+                try:
+                    if not isinstance(link, dict):
+                        errors.append(f"Item {idx}: not a dict")
+                        continue
+                    if 'path' not in link:
+                        errors.append(f"Item {idx}: missing path")
+                        continue
+
+                    self.db.add_link(
+                        name=link.get('name', ''),
+                        path=link['path'],
+                        tags=link.get('tags', '')
+                    )
+                    count += 1
+                except Exception as e:
+                    errors.append(f"Item {idx}: {e}")
+
+        if errors:
+            logger.warning(f"Import completed with {len(errors)} errors: {errors[:5]}")  # 最初の5件のみ
 
         return count
 
@@ -58,17 +93,34 @@ class LinkManager:
             json.dump(export_data, f, ensure_ascii=False, indent=2)
 
     def validate_path(self, path: str) -> bool:
-        """Validate if a path exists"""
-        return os.path.exists(path)
+        """Validate if a path exists and is safe"""
+        try:
+            # 正規化してパストラバーサルを防ぐ
+            normalized_path = os.path.normpath(path)
+            real_path = os.path.realpath(normalized_path)
+
+            # 絶対パスへの変換
+            abs_path = os.path.abspath(real_path)
+
+            # 存在確認
+            return os.path.exists(abs_path)
+        except (ValueError, OSError):
+            return False
 
     def open_in_explorer(self, path: str):
-        """Open a path in Windows Explorer"""
-        if os.path.exists(path):
-            if os.path.isfile(path):
-                os.startfile(os.path.dirname(path))
-                # Note: Can't select file directly in Python's os.startfile
-            else:
-                os.startfile(path)
+        """Open a path in Windows Explorer with security validation"""
+        # セキュリティ検証
+        if not self.validate_path(path):
+            raise ValueError(f"Invalid or non-existent path: {path}")
+
+        # 正規化されたパスを使用
+        normalized_path = os.path.normpath(os.path.realpath(path))
+
+        if os.path.isfile(normalized_path):
+            os.startfile(os.path.dirname(normalized_path))
+            # Note: Can't select file directly in Python's os.startfile
+        else:
+            os.startfile(normalized_path)
 
     def close(self):
         """Close the database connection"""

@@ -103,7 +103,10 @@ class ThemedListDelegate(QStyledItemDelegate):
         path_font.setPointSize(VC.FONT_PATH)
         path_font.setWeight(QFont.Weight.Medium)  # Medium (500)
         painter.setFont(path_font)
-        painter.setPen(palette.color(QPalette.Mid))
+        # Improved contrast: use WindowText with 75% opacity instead of Mid
+        path_color = QColor(palette.color(QPalette.WindowText))
+        path_color.setAlphaF(0.75)
+        painter.setPen(path_color)
 
         path_rect = QRect(
             text_rect.x(),
@@ -244,7 +247,10 @@ class ThemedCardDelegate(QStyledItemDelegate):
         path_font.setPointSize(VC.FONT_CARD_PATH)
         path_font.setWeight(QFont.Weight.Medium)  # Medium (500)
         painter.setFont(path_font)
-        painter.setPen(palette.color(QPalette.Mid))
+        # Improved contrast: use WindowText with 75% opacity instead of Mid
+        path_color = QColor(palette.color(QPalette.WindowText))
+        path_color.setAlphaF(0.75)
+        painter.setPen(path_color)
 
         elided_path = painter.fontMetrics().elidedText(
             record.path, Qt.ElideMiddle, path_rect.width()

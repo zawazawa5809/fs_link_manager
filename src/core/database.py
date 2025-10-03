@@ -22,18 +22,26 @@ class LinkDatabase:
 
         self.db_path = db_path
         self.read_only = read_only
+        self.conn = None
 
-        # 接続オプション
-        uri = f"file:{db_path}?mode={'ro' if read_only else 'rwc'}"
-        self.conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
+        try:
+            # 接続オプション
+            uri = f"file:{db_path}?mode={'ro' if read_only else 'rwc'}"
+            self.conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
 
-        if not read_only:
-            # 書き込み可能な場合のみPRAGMA設定
-            self.conn.execute("PRAGMA journal_mode=WAL;")
-            self.conn.execute("PRAGMA foreign_keys=ON;")
-            # トランザクションタイムアウト設定
-            self.conn.execute("PRAGMA busy_timeout=5000;")  # 5秒
-            self._init_schema()
+            if not read_only:
+                # 書き込み可能な場合のみPRAGMA設定
+                self.conn.execute("PRAGMA journal_mode=WAL;")
+                self.conn.execute("PRAGMA foreign_keys=ON;")
+                # トランザクションタイムアウト設定
+                self.conn.execute("PRAGMA busy_timeout=5000;")  # 5秒
+                self._init_schema()
+        except sqlite3.Error as e:
+            # エラー時に接続をクリーンアップ
+            if self.conn:
+                self.conn.close()
+                self.conn = None
+            raise RuntimeError(f"Database initialization failed: {e}") from e
 
     def _init_schema(self):
         """Initialize database schema"""
@@ -105,11 +113,20 @@ class LinkDatabase:
         rows = self.conn.execute(query, params).fetchall()
         return [LinkRecord(*r) for r in rows]
 
+    def get_link_by_id(self, id_: int) -> Optional[LinkRecord]:
+        """Get a single link by ID (optimized for O(1) access)"""
+        cur = self.conn.cursor()
+        row = cur.execute(
+            "SELECT id, name, path, tags, position, added_at FROM links WHERE id = ?",
+            (id_,)
+        ).fetchone()
+        return LinkRecord(*row) if row else None
+
     def reorder(self, ordered_ids: List[int]):
-        """Reorder links by reassigning positions"""
-        for pos, id_ in enumerate(ordered_ids):
-            self.conn.execute("UPDATE links SET position = ? WHERE id = ?;", (pos, id_))
-        self.conn.commit()
+        """Reorder links by reassigning positions (with transaction)"""
+        with self.transaction():
+            for pos, id_ in enumerate(ordered_ids):
+                self.conn.execute("UPDATE links SET position = ? WHERE id = ?;", (pos, id_))
 
     @contextmanager
     def transaction(self):
@@ -131,6 +148,11 @@ class LinkDatabase:
             raise
 
     def close(self):
-        """Close database connection"""
+        """Close database connection safely"""
         if self.conn:
-            self.conn.close()
+            try:
+                self.conn.close()
+            except sqlite3.Error:
+                pass  # Ignore errors during close
+            finally:
+                self.conn = None

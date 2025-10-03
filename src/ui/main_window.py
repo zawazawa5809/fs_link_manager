@@ -240,9 +240,8 @@ class MainWindow(QMainWindow):
         return index.data(Qt.UserRole)
 
     def get_record(self, id_: int) -> Optional[LinkRecord]:
-        """Get record by ID"""
-        recs = {r.id: r for r in self.db.list_links(self.search.text())}
-        return recs.get(id_)
+        """Get record by ID (optimized)"""
+        return self.db.get_link_by_id(id_)
 
     @Slot(list)
     def on_links_dropped(self, pairs):
@@ -318,6 +317,26 @@ class MainWindow(QMainWindow):
         self.import_export_controller.export_to_file(self)
 
     def closeEvent(self, event):
-        """Handle window close event"""
-        self.db.close()
-        event.accept()
+        """Handle window close event with safe resource cleanup"""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            # データベース接続を安全にクローズ
+            if hasattr(self, 'db') and self.db:
+                try:
+                    self.db.close()
+                except Exception as e:
+                    logger.warning(f"Error closing database: {e}")
+
+            # マネージャーリソースをクローズ
+            if hasattr(self, 'manager') and self.manager:
+                try:
+                    self.manager.close()
+                except Exception as e:
+                    logger.warning(f"Error closing manager: {e}")
+
+            event.accept()
+        except Exception as e:
+            logger.error(f"Error in closeEvent: {e}", exc_info=True)
+            event.accept()  # エラーでも確実にクローズ

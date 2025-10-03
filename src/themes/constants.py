@@ -12,7 +12,7 @@ class VisualConstants:
     """視覚的なデザイン定数"""
 
     # Icon background lightness
-    ICON_BG_LIGHTNESS: ClassVar[int] = 180
+    ICON_BG_LIGHTNESS: ClassVar[int] = 168
 
     # Highlight colors
     HIGHLIGHT_LIGHTNESS: ClassVar[int] = 150
@@ -30,11 +30,11 @@ class VisualConstants:
     CARD_ICON_SIZE: ClassVar[int] = 64
 
     # Font sizes
-    FONT_TITLE: ClassVar[int] = 14
-    FONT_PATH: ClassVar[int] = 11
-    FONT_CARD_TITLE: ClassVar[int] = 13
-    FONT_CARD_PATH: ClassVar[int] = 10
-    FONT_CARD_TAGS: ClassVar[int] = 10
+    FONT_TITLE: ClassVar[int] = 16
+    FONT_PATH: ClassVar[int] = 12
+    FONT_CARD_TITLE: ClassVar[int] = 15
+    FONT_CARD_PATH: ClassVar[int] = 11
+    FONT_CARD_TAGS: ClassVar[int] = 11
     FONT_ICON_LIST: ClassVar[int] = 18
     FONT_ICON_CARD: ClassVar[int] = 24
 
