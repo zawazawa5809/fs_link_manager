@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QMenu, QToolBar, QStatusBar, QSizePolicy, QStyle
 )
 
-from ..core import LinkDatabase, LinkRecord, LinkManager
+from ..core import LinkDatabase, LinkRecord, LinkManager, SettingsManager
 from ..themes import ThemeManager
 from ..i18n import tr
 from .widgets import LinkList
@@ -16,6 +16,7 @@ from .widgets.link_list import ViewMode
 from .widgets.factory import WidgetFactory
 from .models import LinkListModel
 from .controllers import LinkController, ImportExportController
+from .dialogs import SettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -26,8 +27,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tr("app.title"))
         self.resize(1100, 750)
 
-        # Get theme manager instance (already initialized in main.py)
+        # Get manager instances
         self.theme_manager = ThemeManager()
+        self.settings_manager = SettingsManager()
 
         # Initialize database and manager
         self.db = LinkDatabase()
@@ -49,11 +51,13 @@ class MainWindow(QMainWindow):
         # Load initial data
         self.reload_list()
 
-        # Connect theme change signal
+        # Connect manager signals
         self.theme_manager.theme_changed.connect(self.on_theme_changed)
+        self.settings_manager.font_settings_changed.connect(self._on_font_settings_changed)
 
     def _create_ui(self):
         """Create the user interface"""
+        self._create_menu_bar()
         self._create_toolbar()
         self._create_central_widget()
         self._create_status_bar()
@@ -66,30 +70,87 @@ class MainWindow(QMainWindow):
         self.import_export_controller.export_completed.connect(lambda: None)
         self.import_export_controller.status_message.connect(self._show_status_message)
 
+    def _create_menu_bar(self):
+        """Create menu bar"""
+        menubar = self.menuBar()
+
+        # ファイルメニュー
+        file_menu = menubar.addMenu(tr("menu.file"))
+
+        add_action = QAction(tr("menu.add_link"), self)
+        add_action.setShortcut("Ctrl+N")
+        add_action.triggered.connect(self.add_link_dialog)
+        file_menu.addAction(add_action)
+
+        file_menu.addSeparator()
+
+        import_action = QAction(tr("menu.import"), self)
+        import_action.setShortcut("Ctrl+I")
+        import_action.triggered.connect(self.import_from_file)
+        file_menu.addAction(import_action)
+
+        export_action = QAction(tr("menu.export"), self)
+        export_action.setShortcut("Ctrl+E")
+        export_action.triggered.connect(self.export_to_file)
+        file_menu.addAction(export_action)
+
+        file_menu.addSeparator()
+
+        exit_action = QAction(tr("menu.exit"), self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # 編集メニュー
+        edit_menu = menubar.addMenu(tr("menu.edit"))
+
+        edit_action = QAction(tr("menu.edit_link"), self)
+        edit_action.triggered.connect(self.edit_selected)
+        edit_menu.addAction(edit_action)
+
+        delete_action = QAction(tr("menu.delete_link"), self)
+        delete_action.setShortcut("Delete")
+        delete_action.triggered.connect(self.delete_selected)
+        edit_menu.addAction(delete_action)
+
+        # 表示メニュー
+        view_menu = menubar.addMenu(tr("menu.view"))
+
+        # 表示モード
+        list_action = QAction(tr("menu.list_view"), self)
+        list_action.setShortcut("Ctrl+1")
+        list_action.triggered.connect(lambda: self._switch_view_mode(0))
+        view_menu.addAction(list_action)
+
+        grid_action = QAction(tr("menu.grid_view"), self)
+        grid_action.setShortcut("Ctrl+2")
+        grid_action.triggered.connect(lambda: self._switch_view_mode(1))
+        view_menu.addAction(grid_action)
+
+        view_menu.addSeparator()
+
+        # テーマサブメニュー
+        theme_menu = view_menu.addMenu(tr("menu.theme"))
+        available_themes = self.theme_manager.get_available_themes()
+        for theme_key in available_themes:
+            display_name = tr(f"themes.{theme_key}")
+            theme_action = QAction(display_name, self)
+            theme_action.triggered.connect(lambda checked, t=theme_key: self._apply_theme_from_menu(t))
+            theme_menu.addAction(theme_action)
+
+        # 設定メニュー
+        settings_menu = menubar.addMenu(tr("menu.settings"))
+
+        settings_action = QAction(tr("menu.preferences"), self)
+        settings_action.setShortcut("Ctrl+,")
+        settings_action.triggered.connect(self.open_settings)
+        settings_menu.addAction(settings_action)
+
     def _create_toolbar(self):
         """Create toolbar"""
         toolbar = QToolBar("Main")
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
-
-        # View mode selector
-        view_widget = QWidget()
-        view_layout = QHBoxLayout(view_widget)
-        view_layout.setContentsMargins(4, 0, 4, 0)
-        view_layout.setSpacing(4)
-
-        view_label = WidgetFactory.create_label(tr("toolbar.view_label"), "default")
-        view_layout.addWidget(view_label)
-
-        self.view_combo = WidgetFactory.create_combo_box([
-            tr("view_modes.list"),
-            tr("view_modes.grid")
-        ])
-        self.view_combo.currentIndexChanged.connect(self._on_view_mode_changed)
-        view_layout.addWidget(self.view_combo)
-
-        toolbar.addWidget(view_widget)
-        toolbar.addSeparator()
 
         # File operations
         add_act = QAction(
@@ -138,38 +199,6 @@ class MainWindow(QMainWindow):
         delete_act.triggered.connect(self.delete_selected)
         toolbar.addAction(delete_act)
 
-        # Spacer
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        toolbar.addWidget(spacer)
-
-        # Theme selector
-        theme_widget = QWidget()
-        theme_layout = QHBoxLayout(theme_widget)
-        theme_layout.setContentsMargins(4, 0, 4, 0)
-
-        theme_label = WidgetFactory.create_label(tr("toolbar.theme_label"), "default")
-        theme_layout.addWidget(theme_label)
-
-        # Get available themes
-        available_themes = self.theme_manager.get_available_themes()
-
-        theme_display_names = []
-        self.theme_keys = []
-        for theme_key in available_themes:
-            display_name = tr(f"themes.{theme_key}")
-            theme_display_names.append(display_name)
-            self.theme_keys.append(theme_key)
-
-        self.theme_combo = WidgetFactory.create_combo_box(theme_display_names)
-        current_theme = self.theme_manager.get_current_theme()
-        if current_theme in self.theme_keys:
-            self.theme_combo.setCurrentIndex(self.theme_keys.index(current_theme))
-        self.theme_combo.currentIndexChanged.connect(self._on_theme_changed)
-        theme_layout.addWidget(self.theme_combo)
-
-        toolbar.addWidget(theme_widget)
-
     def _create_central_widget(self):
         """Create central widget"""
         central = QWidget()
@@ -202,21 +231,36 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
 
-    def _on_view_mode_changed(self, index):
-        """Handle view mode change"""
+    def _switch_view_mode(self, index):
+        """Switch view mode from menu"""
         modes = [ViewMode.LIST, ViewMode.GRID]
         self.list_view.set_view_mode(modes[index])
         self.reload_list()
 
-    def _on_theme_changed(self, index):
-        """Handle theme selection change"""
-        if 0 <= index < len(self.theme_keys):
-            theme_key = self.theme_keys[index]
-            self.theme_manager.apply_theme(theme_key)
+    def _apply_theme_from_menu(self, theme_key: str):
+        """Apply theme from menu and save to settings"""
+        self.settings_manager.settings.theme = theme_key
+        self.settings_manager.save_settings()
+        self.theme_manager.apply_theme(theme_key)
 
     def on_theme_changed(self, theme_name: str):
         """Handle theme change signal"""
         self.status_bar.showMessage(tr("status.theme_changed", theme=theme_name), 2000)
+
+    def _on_font_settings_changed(self):
+        """Handle font settings change"""
+        settings = self.settings_manager.settings
+        self.theme_manager.apply_custom_font_size(settings.font_size, settings.font_scale)
+
+    def open_settings(self):
+        """Open settings dialog"""
+        dialog = SettingsDialog(self)
+        dialog.settings_applied.connect(self._on_settings_applied)
+        dialog.exec()
+
+    def _on_settings_applied(self):
+        """Handle settings applied"""
+        self.status_bar.showMessage(tr("status.settings_applied"), 2000)
 
     def _show_status_message(self, message: str, timeout_ms: int):
         """Show status message"""

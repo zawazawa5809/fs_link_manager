@@ -26,10 +26,8 @@ class Translator(QObject):
         super().__init__()
         self.translations: Dict[str, Dict] = {}
         self.current_language: str = 'ja_JP'
-        self.settings = QSettings("FSLinkManager", "TranslationSettings")
         self._initialized = True
         self._load_translations()
-        self._restore_last_language()
 
     def _load_translations(self):
         """翻訳ファイルを読み込み"""
@@ -43,11 +41,10 @@ class Translator(QObject):
             except (json.JSONDecodeError, IOError) as e:
                 print(f"翻訳ファイル読み込みエラー {trans_file}: {e}")
 
-    def _restore_last_language(self):
-        """前回の言語設定を復元"""
-        last_lang = self.settings.value("language", "ja_JP")
-        if last_lang in self.translations:
-            self.current_language = last_lang
+    def restore_language(self, lang_code: str):
+        """外部から指定された言語を復元"""
+        if lang_code in self.translations:
+            self.current_language = lang_code
         else:
             self.current_language = "ja_JP"
 
@@ -57,7 +54,6 @@ class Translator(QObject):
             raise ValueError(f"Unknown language: {lang_code}")
 
         self.current_language = lang_code
-        self.settings.setValue("language", lang_code)
         self.language_changed.emit(lang_code)
 
     def get(self, key_path: str, **kwargs) -> str:

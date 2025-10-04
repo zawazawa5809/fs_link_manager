@@ -1,0 +1,176 @@
+"""Link editing dialogs for FS Link Manager"""
+
+import os
+from typing import Optional, Tuple
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel,
+    QDialogButtonBox, QFileDialog, QPushButton
+)
+from PySide6.QtCore import Qt
+
+from ...core import LinkRecord
+from ...i18n import tr
+from ..widgets.factory import WidgetFactory
+
+
+class LinkAddDialog(QDialog):
+    """リンク追加ダイアログ"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("dialogs.add_link"))
+        self.setModal(True)
+        self.resize(500, 200)
+
+        self.path = ""
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """UIをセットアップ"""
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        # パス選択
+        path_layout = QHBoxLayout()
+        path_label = WidgetFactory.create_label(tr("dialogs.path_label"), "default")
+        path_layout.addWidget(path_label)
+
+        self.path_field = WidgetFactory.create_input_field(
+            tr("dialogs.path_placeholder"), "text"
+        )
+        self.path_field.setReadOnly(True)
+        path_layout.addWidget(self.path_field, 1)
+
+        browse_btn = WidgetFactory.create_button(tr("dialogs.browse"), "secondary")
+        browse_btn.clicked.connect(self._browse_path)
+        path_layout.addWidget(browse_btn)
+
+        layout.addLayout(path_layout)
+
+        # 名前入力
+        name_layout = QHBoxLayout()
+        name_label = WidgetFactory.create_label(tr("dialogs.display_name"), "default")
+        name_layout.addWidget(name_label)
+
+        self.name_field = WidgetFactory.create_input_field(
+            tr("dialogs.name_placeholder"), "text"
+        )
+        name_layout.addWidget(self.name_field, 1)
+
+        layout.addLayout(name_layout)
+
+        # タグ入力
+        tags_layout = QHBoxLayout()
+        tags_label = WidgetFactory.create_label(tr("dialogs.tags_hint"), "default")
+        tags_layout.addWidget(tags_label)
+
+        self.tags_field = WidgetFactory.create_input_field(
+            tr("dialogs.tags_placeholder"), "text"
+        )
+        tags_layout.addWidget(self.tags_field, 1)
+
+        layout.addLayout(tags_layout)
+
+        # ボタン
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+    def _browse_path(self):
+        """パスを参照"""
+        dlg = QFileDialog(self, tr("dialogs.select_link_target"))
+        dlg.setFileMode(QFileDialog.ExistingFile)
+        if dlg.exec():
+            paths = dlg.selectedFiles()
+            if paths:
+                self.path = paths[0]
+                self.path_field.setText(self.path)
+                # 自動的に名前を設定
+                if not self.name_field.text():
+                    self.name_field.setText(os.path.basename(self.path))
+
+    def get_values(self) -> Tuple[str, str, str]:
+        """入力値を取得"""
+        return (
+            self.name_field.text(),
+            self.path,
+            self.tags_field.text()
+        )
+
+
+class LinkEditDialog(QDialog):
+    """リンク編集ダイアログ"""
+
+    def __init__(self, record: LinkRecord, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("dialogs.edit_link"))
+        self.setModal(True)
+        self.resize(500, 180)
+
+        self.record = record
+        self._setup_ui()
+        self._load_values()
+
+    def _setup_ui(self):
+        """UIをセットアップ"""
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        # パス表示（読み取り専用）
+        path_layout = QHBoxLayout()
+        path_label = WidgetFactory.create_label(tr("dialogs.path_label"), "default")
+        path_layout.addWidget(path_label)
+
+        self.path_display = WidgetFactory.create_input_field("", "text")
+        self.path_display.setReadOnly(True)
+        path_layout.addWidget(self.path_display, 1)
+
+        layout.addLayout(path_layout)
+
+        # 名前入力
+        name_layout = QHBoxLayout()
+        name_label = WidgetFactory.create_label(tr("dialogs.display_name"), "default")
+        name_layout.addWidget(name_label)
+
+        self.name_field = WidgetFactory.create_input_field(
+            tr("dialogs.name_placeholder"), "text"
+        )
+        name_layout.addWidget(self.name_field, 1)
+
+        layout.addLayout(name_layout)
+
+        # タグ入力
+        tags_layout = QHBoxLayout()
+        tags_label = WidgetFactory.create_label(tr("dialogs.tags_hint"), "default")
+        tags_layout.addWidget(tags_label)
+
+        self.tags_field = WidgetFactory.create_input_field(
+            tr("dialogs.tags_placeholder"), "text"
+        )
+        tags_layout.addWidget(self.tags_field, 1)
+
+        layout.addLayout(tags_layout)
+
+        # ボタン
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+    def _load_values(self):
+        """既存の値を読み込み"""
+        self.path_display.setText(self.record.path)
+        self.name_field.setText(self.record.name)
+        self.tags_field.setText(self.record.tags)
+
+    def get_values(self) -> Tuple[str, str]:
+        """入力値を取得"""
+        return (
+            self.name_field.text(),
+            self.tags_field.text()
+        )

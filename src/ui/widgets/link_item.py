@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QStyledItemDelegate, QStyle, QApplication
 
 from ...themes.manager import ThemeManager
 from ...themes.constants import VisualConstants as VC, FileTypeIcons as FI
+from ...core import SettingsManager
 
 
 class ThemedListDelegate(QStyledItemDelegate):
@@ -17,9 +18,32 @@ class ThemedListDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.theme_manager = ThemeManager()
+        self.settings_manager = SettingsManager()
         self.item_height = VC.LIST_ITEM_HEIGHT
         self.padding = VC.LIST_PADDING
         self.icon_size = VC.LIST_ICON_SIZE
+
+        # Connect to settings changes for live updates
+        self.settings_manager.font_settings_changed.connect(self._on_font_settings_changed)
+
+    def _on_font_settings_changed(self):
+        """Handle font settings change - trigger repaint"""
+        if self.parent():
+            self.parent().viewport().update()
+
+    def _get_contrast_text_color(self, palette, is_selected: bool) -> QColor:
+        """選択状態に応じて適切なコントラストのテキスト色を取得"""
+        if is_selected:
+            # 選択時は常に白を使用（全テーマで統一的な視認性）
+            return QColor('#ffffff')
+        else:
+            return palette.color(QPalette.WindowText)
+
+    def _get_scaled_font_size(self, base_size: int) -> int:
+        """Get font size scaled by global settings"""
+        global_size = self.settings_manager.get_effective_font_size()
+        # Scale proportionally: base 13px is the reference
+        return int(base_size * (global_size / 13.0))
 
     def paint(self, painter: QPainter, option, index):
         """Paint the list item using theme colors"""
@@ -70,10 +94,10 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw emoji
         font = painter.font()
-        font.setPointSize(VC.FONT_ICON_LIST)
+        font.setPointSize(self._get_scaled_font_size(VC.FONT_ICON_LIST))
         painter.setFont(font)
-        text_color_role = QPalette.HighlightedText if is_selected else QPalette.WindowText
-        painter.setPen(palette.color(text_color_role))
+        text_color = self._get_contrast_text_color(palette, is_selected)
+        painter.setPen(text_color)
         painter.drawText(icon_bg_rect, Qt.AlignCenter, emoji)
 
         # Text area
@@ -86,10 +110,10 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw title
         title_font = painter.font()
-        title_font.setPointSize(VC.FONT_TITLE)
+        title_font.setPointSize(self._get_scaled_font_size(VC.FONT_TITLE))
         title_font.setWeight(QFont.Weight.DemiBold)  # SemiBold (600)
         painter.setFont(title_font)
-        painter.setPen(palette.color(text_color_role))
+        painter.setPen(text_color)
 
         title = record.name or os.path.basename(record.path)
         title_rect = QRect(text_rect.x(), text_rect.y(), text_rect.width(), 24)
@@ -100,7 +124,7 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw path
         path_font = painter.font()
-        path_font.setPointSize(VC.FONT_PATH)
+        path_font.setPointSize(self._get_scaled_font_size(VC.FONT_PATH))
         path_font.setWeight(QFont.Weight.Medium)  # Medium (500)
         painter.setFont(path_font)
         # Improved contrast: use WindowText with 75% opacity instead of Mid
@@ -132,10 +156,33 @@ class ThemedCardDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.theme_manager = ThemeManager()
+        self.settings_manager = SettingsManager()
         self.card_width = VC.CARD_WIDTH
         self.card_height = VC.CARD_HEIGHT
         self.padding = VC.CARD_PADDING
         self.icon_size = VC.CARD_ICON_SIZE
+
+        # Connect to settings changes for live updates
+        self.settings_manager.font_settings_changed.connect(self._on_font_settings_changed)
+
+    def _on_font_settings_changed(self):
+        """Handle font settings change - trigger repaint"""
+        if self.parent():
+            self.parent().viewport().update()
+
+    def _get_contrast_text_color(self, palette, is_selected: bool) -> QColor:
+        """選択状態に応じて適切なコントラストのテキスト色を取得"""
+        if is_selected:
+            # 選択時は常に白を使用（全テーマで統一的な視認性）
+            return QColor('#ffffff')
+        else:
+            return palette.color(QPalette.WindowText)
+
+    def _get_scaled_font_size(self, base_size: int) -> int:
+        """Get font size scaled by global settings"""
+        global_size = self.settings_manager.get_effective_font_size()
+        # Scale proportionally: base 13px is the reference
+        return int(base_size * (global_size / 13.0))
 
     def paint(self, painter: QPainter, option, index):
         """Paint the card item using theme colors"""
@@ -209,10 +256,10 @@ class ThemedCardDelegate(QStyledItemDelegate):
 
         # Draw emoji
         font = painter.font()
-        font.setPointSize(VC.FONT_ICON_CARD)
+        font.setPointSize(self._get_scaled_font_size(VC.FONT_ICON_CARD))
         painter.setFont(font)
-        text_color_role = QPalette.HighlightedText if is_selected else QPalette.WindowText
-        painter.setPen(palette.color(text_color_role))
+        text_color = self._get_contrast_text_color(palette, is_selected)
+        painter.setPen(text_color)
         painter.drawText(icon_rect, Qt.AlignCenter, emoji)
 
         # Draw title
@@ -224,10 +271,10 @@ class ThemedCardDelegate(QStyledItemDelegate):
         )
 
         title_font = painter.font()
-        title_font.setPointSize(VC.FONT_CARD_TITLE)
+        title_font.setPointSize(self._get_scaled_font_size(VC.FONT_CARD_TITLE))
         title_font.setWeight(QFont.Weight.DemiBold)  # SemiBold (600)
         painter.setFont(title_font)
-        painter.setPen(palette.color(text_color_role))
+        painter.setPen(text_color)
 
         title = record.name or os.path.basename(record.path)
         elided_title = painter.fontMetrics().elidedText(
@@ -244,7 +291,7 @@ class ThemedCardDelegate(QStyledItemDelegate):
         )
 
         path_font = painter.font()
-        path_font.setPointSize(VC.FONT_CARD_PATH)
+        path_font.setPointSize(self._get_scaled_font_size(VC.FONT_CARD_PATH))
         path_font.setWeight(QFont.Weight.Medium)  # Medium (500)
         painter.setFont(path_font)
         # Improved contrast: use WindowText with 75% opacity instead of Mid
@@ -267,7 +314,7 @@ class ThemedCardDelegate(QStyledItemDelegate):
             )
 
             tags_font = painter.font()
-            tags_font.setPointSize(VC.FONT_CARD_TAGS)
+            tags_font.setPointSize(self._get_scaled_font_size(VC.FONT_CARD_TAGS))
             tags_font.setWeight(QFont.Weight.Medium)  # Medium (500)
             tags_font.setItalic(True)
             painter.setFont(tags_font)

@@ -32,10 +32,9 @@ class ThemeManager(QObject):
         self.app = app or QApplication.instance()
         self.themes: Dict[str, Dict] = {}
         self.current_theme: Optional[str] = None
-        self.settings = QSettings("FSLinkManager", "ThemeSettings")
+        self._custom_font_size: Optional[int] = None
         self._initialized = True
         self._load_theme_definitions()
-        self._restore_last_theme()
 
     def _load_theme_definitions(self):
         """テーマ定義をJSONから読み込み"""
@@ -194,15 +193,14 @@ class ThemeManager(QObject):
             }
         }
 
-    def _restore_last_theme(self):
-        """前回のテーマを復元"""
-        last_theme = self.settings.value("theme", "dark_professional")
-        if last_theme in self.themes:
-            self.apply_theme(last_theme)
+    def restore_theme(self, theme_name: str):
+        """外部から指定されたテーマを復元"""
+        if theme_name in self.themes:
+            self.apply_theme(theme_name, save=False, preserve_font=False)
         else:
-            self.apply_theme("dark_professional")
+            self.apply_theme("dark_professional", save=False, preserve_font=False)
 
-    def apply_theme(self, theme_name: str):
+    def apply_theme(self, theme_name: str, save: bool = True, preserve_font: bool = True):
         """テーマを適用"""
         if theme_name not in self.themes:
             raise ValueError(f"Unknown theme: {theme_name}")
@@ -215,15 +213,16 @@ class ThemeManager(QObject):
         self.app.setPalette(palette)
 
         # グローバルスタイルシート適用
-        qss = self._generate_qss(self.themes[theme_name])
+        qss = self._generate_qss(self.themes[theme_name], preserve_font=preserve_font)
         self.app.setStyleSheet(qss)
 
         # すべてのウィジェットを再描画
         self._repolish_widgets()
 
-        # 状態を保存
+        # 状態を更新
         self.current_theme = theme_name
-        self.settings.setValue("theme", theme_name)
+
+        # シグナル発火（saveフラグに関わらず通知）
         self.theme_changed.emit(theme_name)
 
     def _create_palette(self, theme: Dict) -> QPalette:
@@ -265,10 +264,18 @@ class ThemeManager(QObject):
 
         return palette
 
-    def _generate_qss(self, theme: Dict) -> str:
+    def _generate_qss(self, theme: Dict, preserve_font: bool = False) -> str:
         """テーマ定義からQSSを生成（テンプレートベース）"""
-        dims = theme.get('dimensions', {})
+        dims = theme.get('dimensions', {}).copy()
         colors = theme.get('colors', {})
+
+        # フォント設定を保持する場合は、現在の設定を使用
+        if preserve_font and self._custom_font_size:
+            dims['font_size'] = self._custom_font_size
+            dims['font_size_small'] = max(9, self._custom_font_size - 2)
+            dims['font_size_large'] = self._custom_font_size + 3
+
+
 
         # QSSテンプレートを読み込み
         template_path = Path(__file__).parent / "data" / "base_styles.qss"
@@ -388,6 +395,23 @@ class ThemeManager(QObject):
             json.dump(theme_data, f, ensure_ascii=False, indent=2)
 
         self.themes[theme_name] = theme_data
+
+    def apply_custom_font_size(self, base_size: int, scale: float = 1.0):
+        """カスタムフォントサイズを適用"""
+        if not self.current_theme:
+            return
+
+        # カスタムフォントサイズを記録
+        effective_size = int(base_size * scale)
+        self._custom_font_size = effective_size
+
+        # QSSを再生成して適用（フォント設定を保持）
+        theme = self.themes[self.current_theme]
+        qss = self._generate_qss(theme, preserve_font=True)
+        self.app.setStyleSheet(qss)
+
+        # ウィジェットを再描画
+        self._repolish_widgets()
 
 
 class ThemedWidget(QWidget):

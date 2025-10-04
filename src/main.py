@@ -9,6 +9,8 @@ from PySide6.QtCore import Qt
 
 from .ui import MainWindow
 from .themes import ThemeManager
+from .core import SettingsManager
+from .i18n import Translator
 
 
 def setup_logging():
@@ -41,8 +43,20 @@ def main():
     app.setApplicationName("FS Link Manager")
     app.setOrganizationName("FSLinkManager")
 
-    # Initialize theme manager
+    # Initialize managers
+    settings_manager = SettingsManager()
     theme_manager = ThemeManager(app)
+    translator = Translator()
+
+    # Restore settings from SettingsManager
+    theme_manager.restore_theme(settings_manager.settings.theme)
+    translator.restore_language(settings_manager.settings.language)
+
+    # Apply initial font settings
+    theme_manager.apply_custom_font_size(
+        settings_manager.settings.font_size,
+        settings_manager.settings.font_scale
+    )
 
     # Create and show main window
     window = MainWindow()

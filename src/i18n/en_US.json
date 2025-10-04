@@ -2,15 +2,29 @@
   "app": {
     "title": "FS Link Manager"
   },
+  "menu": {
+    "file": "File",
+    "add_link": "Add Link",
+    "import": "Import",
+    "export": "Export",
+    "exit": "Exit",
+    "edit": "Edit",
+    "edit_link": "Edit Link",
+    "delete_link": "Delete Link",
+    "view": "View",
+    "list_view": "List View",
+    "grid_view": "Grid View",
+    "theme": "Theme",
+    "settings": "Settings",
+    "preferences": "Preferences"
+  },
   "toolbar": {
-    "view_label": "View:",
     "add_tooltip": "Add file or folder",
     "import": "Import",
     "export": "Export",
     "open": "Open",
     "edit": "Edit",
-    "delete": "Delete",
-    "theme_label": "Theme:"
+    "delete": "Delete"
   },
   "view_modes": {
     "list": "List",
@@ -26,8 +40,15 @@
   },
   "dialogs": {
     "select_link_target": "Select Link Target",
+    "add_link": "Add Link",
+    "edit_link": "Edit Link",
     "edit_name": "Edit Name",
     "display_name": "Display Name:",
+    "path_label": "Path:",
+    "path_placeholder": "Select a file or folder",
+    "name_placeholder": "Enter name",
+    "tags_placeholder": "Enter comma-separated tags",
+    "browse": "Browse",
     "edit_tags": "Edit Tags",
     "tags_hint": "Comma-separated tags:",
     "confirm": "Confirm",
@@ -42,7 +63,47 @@
     "validation_error": "Validation Error",
     "unexpected_error": "Unexpected Error",
     "warning": "Warning",
-    "information": "Information"
+    "information": "Information",
+    "settings_title": "Preferences"
+  },
+  "settings": {
+    "tabs": {
+      "appearance": "Appearance",
+      "view": "View",
+      "general": "General"
+    },
+    "appearance": {
+      "font_settings": "Font Settings",
+      "base_font_size": "Base Font Size:",
+      "font_scale": "Font Scale:",
+      "scale_small": "Small",
+      "scale_medium": "Medium",
+      "scale_large": "Large",
+      "scale_extra_large": "Extra Large",
+      "theme_settings": "Theme Settings",
+      "theme": "Theme:",
+      "language": "Language:"
+    },
+    "view": {
+      "view_mode_settings": "View Mode Settings",
+      "default_view_mode": "Default View Mode:",
+      "list_settings": "List View Settings",
+      "list_item_height": "List Item Height:",
+      "grid_settings": "Grid View Settings",
+      "grid_card_size": "Grid Card Size:",
+      "grid_size_small": "Small",
+      "grid_size_medium": "Medium",
+      "grid_size_large": "Large"
+    },
+    "general": {
+      "behavior_settings": "Behavior Settings",
+      "auto_save": "Enable auto-save",
+      "show_item_count": "Show item count"
+    },
+    "reset_defaults": "Reset to Defaults",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "apply": "Apply"
   },
   "context_menu": {
     "open": "Open",
@@ -56,7 +117,8 @@
     "item_deleted": "Item deleted",
     "links_imported": "{count} links imported",
     "export_completed": "Export completed",
-    "theme_changed": "Theme changed: {theme}"
+    "theme_changed": "Theme changed: {theme}",
+    "settings_applied": "Settings applied"
   },
   "tags": {
     "folder": "Folder"

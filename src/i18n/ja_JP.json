@@ -2,15 +2,29 @@
   "app": {
     "title": "FS Link Manager"
   },
+  "menu": {
+    "file": "ファイル",
+    "add_link": "リンクを追加",
+    "import": "インポート",
+    "export": "エクスポート",
+    "exit": "終了",
+    "edit": "編集",
+    "edit_link": "リンクを編集",
+    "delete_link": "リンクを削除",
+    "view": "表示",
+    "list_view": "リスト表示",
+    "grid_view": "グリッド表示",
+    "theme": "テーマ",
+    "settings": "設定",
+    "preferences": "環境設定"
+  },
   "toolbar": {
-    "view_label": "表示:",
     "add_tooltip": "ファイルまたはフォルダを追加",
     "import": "インポート",
     "export": "エクスポート",
     "open": "開く",
     "edit": "編集",
-    "delete": "削除",
-    "theme_label": "テーマ:"
+    "delete": "削除"
   },
   "view_modes": {
     "list": "リスト",
@@ -26,8 +40,15 @@
   },
   "dialogs": {
     "select_link_target": "リンク対象を選択",
+    "add_link": "リンクを追加",
+    "edit_link": "リンクを編集",
     "edit_name": "名前を編集",
     "display_name": "表示名:",
+    "path_label": "パス:",
+    "path_placeholder": "ファイルまたはフォルダを選択してください",
+    "name_placeholder": "名前を入力",
+    "tags_placeholder": "タグをカンマ区切りで入力",
+    "browse": "参照",
     "edit_tags": "タグを編集",
     "tags_hint": "カンマ区切りタグ:",
     "confirm": "確認",
@@ -42,7 +63,47 @@
     "validation_error": "入力エラー",
     "unexpected_error": "予期しないエラー",
     "warning": "警告",
-    "information": "情報"
+    "information": "情報",
+    "settings_title": "環境設定"
+  },
+  "settings": {
+    "tabs": {
+      "appearance": "外観",
+      "view": "表示",
+      "general": "一般"
+    },
+    "appearance": {
+      "font_settings": "フォント設定",
+      "base_font_size": "ベースフォントサイズ:",
+      "font_scale": "フォントスケール:",
+      "scale_small": "小",
+      "scale_medium": "中",
+      "scale_large": "大",
+      "scale_extra_large": "特大",
+      "theme_settings": "テーマ設定",
+      "theme": "テーマ:",
+      "language": "言語:"
+    },
+    "view": {
+      "view_mode_settings": "表示モード設定",
+      "default_view_mode": "デフォルト表示モード:",
+      "list_settings": "リスト表示設定",
+      "list_item_height": "リストアイテム高さ:",
+      "grid_settings": "グリッド表示設定",
+      "grid_card_size": "グリッドカードサイズ:",
+      "grid_size_small": "小",
+      "grid_size_medium": "中",
+      "grid_size_large": "大"
+    },
+    "general": {
+      "behavior_settings": "動作設定",
+      "auto_save": "自動保存を有効にする",
+      "show_item_count": "アイテム数を表示する"
+    },
+    "reset_defaults": "デフォルトに戻す",
+    "ok": "OK",
+    "cancel": "キャンセル",
+    "apply": "適用"
   },
   "context_menu": {
     "open": "開く",
@@ -56,7 +117,8 @@
     "item_deleted": "アイテムを削除しました",
     "links_imported": "{count} 件のリンクをインポートしました",
     "export_completed": "エクスポートが完了しました",
-    "theme_changed": "テーマを変更しました: {theme}"
+    "theme_changed": "テーマを変更しました: {theme}",
+    "settings_applied": "設定を適用しました"
   },
   "tags": {
     "folder": "フォルダ"

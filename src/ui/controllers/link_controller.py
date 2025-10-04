@@ -3,11 +3,12 @@
 import os
 from typing import List, Tuple
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from ...core import LinkDatabase, LinkRecord, LinkManager
 from ...i18n import tr
 from ...utils import handle_errors, DatabaseError
+from ..dialogs import LinkAddDialog, LinkEditDialog
 
 
 class LinkController(QObject):
@@ -24,13 +25,14 @@ class LinkController(QObject):
 
     def add_links_from_dialog(self, parent_widget) -> bool:
         """ダイアログからリンクを追加"""
-        dlg = QFileDialog(parent_widget, tr("dialogs.select_link_target"))
-        dlg.setFileMode(QFileDialog.ExistingFiles)
-        if dlg.exec():
-            paths = dlg.selectedFiles()
-            pairs = [(os.path.basename(p) or p, p) for p in paths]
-            self.add_links_from_drops(pairs)
-            return True
+        dialog = LinkAddDialog(parent_widget)
+        if dialog.exec():
+            name, path, tags = dialog.get_values()
+            if path:
+                self.db.add_link(name=name, path=path, tags=tags)
+                self.links_updated.emit()
+                self.status_message.emit(tr("status.items_added", count=1), 3000)
+                return True
         return False
 
     @handle_errors()
@@ -60,27 +62,13 @@ class LinkController(QObject):
     @handle_errors(return_on_error=False)
     def edit_link(self, record: LinkRecord, parent_widget) -> bool:
         """リンクを編集"""
-        name, ok1 = QInputDialog.getText(
-            parent_widget,
-            tr("dialogs.edit_name"),
-            tr("dialogs.display_name"),
-            text=record.name
-        )
-        if not ok1:
-            return False
-
-        tags, ok2 = QInputDialog.getText(
-            parent_widget,
-            tr("dialogs.edit_tags"),
-            tr("dialogs.tags_hint"),
-            text=record.tags
-        )
-        if not ok2:
-            return False
-
-        self.db.update_link(record.id, name=name, tags=tags)
-        self.links_updated.emit()
-        return True
+        dialog = LinkEditDialog(record, parent_widget)
+        if dialog.exec():
+            name, tags = dialog.get_values()
+            self.db.update_link(record.id, name=name, tags=tags)
+            self.links_updated.emit()
+            return True
+        return False
 
     @handle_errors(return_on_error=False)
     def delete_link(self, record_id: int, parent_widget) -> bool:
