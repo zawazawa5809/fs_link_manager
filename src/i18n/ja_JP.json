@@ -38,6 +38,11 @@
   "search": {
     "placeholder": "検索（名前 / パス / タグ）"
   },
+  "tag_filter": {
+    "label": "タグで絞り込み:",
+    "all_button": "⚪全て",
+    "count_format": "📊 {total}件中 {filtered}件を表示"
+  },
   "dialogs": {
     "select_link_target": "リンク対象を選択",
     "add_link": "リンクを追加",

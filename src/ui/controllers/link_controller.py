@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from ...core import LinkDatabase, LinkRecord, LinkManager
+from ...core.query_builder import SearchQueryBuilder
 from ...i18n import tr
 from ...utils import handle_errors, DatabaseError
 from ..dialogs import LinkAddDialog, LinkEditDialog
@@ -95,3 +96,21 @@ class LinkController(QObject):
     def search_links(self, query: str) -> List[LinkRecord]:
         """リンクを検索"""
         return self.db.list_links(query)
+
+    def search_links_with_builder(
+        self,
+        builder: SearchQueryBuilder
+    ) -> List[LinkRecord]:
+        """クエリビルダーを使用した検索
+
+        Args:
+            builder: 検索クエリビルダー
+
+        Returns:
+            検索結果のリンクリスト
+        """
+        try:
+            return self.db.search_links(builder)
+        except Exception:
+            # エラー時は空リストを返す(再帰を避けるため@handle_errorsを使わない)
+            return []

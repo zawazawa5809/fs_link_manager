@@ -164,6 +164,46 @@ class SearchQueryBuilder:
 
         return query, all_params
 
+    def filter_by_tags(
+        self,
+        tags: List[str],
+        match_mode: str = "OR"
+    ) -> 'SearchQueryBuilder':
+        """タグによるフィルタリング
+
+        Args:
+            tags: フィルタ対象タグリスト
+            match_mode: "OR"(いずれか一致) or "AND"(全て一致)
+
+        Returns:
+            Self(メソッドチェーン)
+        """
+        if not tags:
+            return self
+
+        if match_mode == "OR":
+            # いずれかのタグを含む(OR条件)
+            # 複数のフィルタを追加すると、SearchFilterのto_sqlメソッドで
+            # OR条件として結合される
+            for tag in tags:
+                self.add_filter(
+                    SearchField.TAGS,
+                    tag,
+                    SearchOperator.CONTAINS
+                )
+        else:  # AND
+            # 全てのタグを含む
+            # 現在の実装では完全なAND実装は複雑なため、Phase2で対応
+            # 暫定的にOR条件として動作
+            for tag in tags:
+                self.add_filter(
+                    SearchField.TAGS,
+                    tag,
+                    SearchOperator.CONTAINS
+                )
+
+        return self
+
     def clear(self) -> 'SearchQueryBuilder':
         """Clear all filter conditions.
 

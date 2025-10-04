@@ -9,11 +9,13 @@ from PySide6.QtWidgets import (
 )
 
 from ..core import LinkDatabase, LinkRecord, LinkManager, SettingsManager
+from ..core.query_builder import SearchQueryBuilder
 from ..themes import ThemeManager
 from ..i18n import tr
 from .widgets import LinkList
 from .widgets.link_list import ViewMode
 from .widgets.factory import WidgetFactory
+from .widgets.tag_filter_panel import TagFilterPanel
 from .models import LinkListModel
 from .models.model_roles import LinkModelRoles
 from .controllers import LinkController, ImportExportController
@@ -34,7 +36,7 @@ class MainWindow(QMainWindow):
 
         # Initialize database and manager
         self.db = LinkDatabase()
-        self.manager = LinkManager()
+        self.manager = LinkManager(db=self.db)
 
         # Initialize controllers
         self.link_controller = LinkController(self.db, self.manager, self)
@@ -215,6 +217,11 @@ class MainWindow(QMainWindow):
         self.search.textChanged.connect(self.reload_list)
         layout.addWidget(self.search)
 
+        # Tag filter panel
+        self.tag_filter = TagFilterPanel()
+        self.tag_filter.filter_changed.connect(self.reload_list)
+        layout.addWidget(self.tag_filter)
+
         # List view
         self.list_view = LinkList()
         self.list_view.linkDropped.connect(self.on_links_dropped)
@@ -283,10 +290,23 @@ class MainWindow(QMainWindow):
     def reload_list(self):
         """Reload the list with data"""
         query = self.search.text()
-        records = self.link_controller.search_links(query)
+        selected_tags = self.tag_filter.get_selected_tags()
+
+        # クエリビルダーで検索 + タグフィルタ
+        builder = SearchQueryBuilder()
+        builder.simple_search(query)
+        builder.filter_by_tags(selected_tags, match_mode="OR")
+
+        records = self.link_controller.search_links_with_builder(builder)
 
         self.model.update_records(records)
         self.list_view.setModel(self.model)
+
+        # タグ一覧を更新(再帰を避けるため直接SQLクエリ)
+        all_tags = self.manager.get_all_tags()
+        total_count = self.db.conn.execute("SELECT COUNT(*) FROM links").fetchone()[0]
+        filtered_count = len(records)
+        self.tag_filter.set_available_tags(all_tags, total_count, filtered_count)
 
         self.status_bar.showMessage(tr("status.items_count", count=len(records)))
 

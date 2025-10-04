@@ -16,13 +16,17 @@ class LinkManager:
     import/export, validation, and file system integration.
     """
 
-    def __init__(self, db_path: Optional[str] = None) -> None:
+    def __init__(self, db: Optional[LinkDatabase] = None, db_path: Optional[str] = None) -> None:
         """Initialize link manager.
 
         Args:
+            db: Optional existing LinkDatabase instance (takes precedence over db_path)
             db_path: Optional database path (defaults to data/links.db)
         """
-        self.db = LinkDatabase(db_path)
+        if db is not None:
+            self.db = db
+        else:
+            self.db = LinkDatabase(db_path)
 
     def import_links(self, file_path: str) -> int:
         """Import links from a JSON file with validation.
@@ -164,6 +168,21 @@ class LinkManager:
             # Note: Can't select file directly in Python's os.startfile
         else:
             os.startfile(normalized_path)
+
+    def get_all_tags(self) -> List[str]:
+        """全リンクからユニークなタグを抽出
+
+        Returns:
+            ソート済みタグリスト(重複なし、大文字小文字区別なしでソート)
+        """
+        all_tags = set()
+        records = self.db.list_links()
+
+        for record in records:
+            tags = record.get_tags_list()
+            all_tags.update(tags)
+
+        return sorted(all_tags, key=str.lower)
 
     def close(self) -> None:
         """Close the database connection."""

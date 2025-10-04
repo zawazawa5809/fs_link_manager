@@ -233,3 +233,49 @@ QLabel[class="caption"] {
     font-size: ${font_size_small}px;
     color: palette(mid);
 }
+
+/* Tag Filter Panel */
+QPushButton[class="tag-button"] {
+    background-color: palette(alternate-base);
+    color: palette(window-text);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    padding: 4px 12px;
+    min-height: 24px;
+    font-size: ${font_size_small}px;
+}
+
+QPushButton[class="tag-button"]:hover {
+    background-color: palette(light);
+    border: 2px solid palette(highlight);
+    color: palette(window-text);
+}
+
+/* 選択状態 - 濃いprimaryカラーで高コントラスト */
+QPushButton[class="tag-button"][selected="true"] {
+    background-color: ${color_primary_dark};
+    color: white;
+    border: 2px solid ${color_primary_dark};
+    font-weight: bold;
+}
+
+QPushButton[class="tag-button"][selected="true"]:hover {
+    background-color: ${color_primary};
+    color: white;
+    border: 2px solid ${color_primary_dark};
+}
+
+/* 「全て」ボタン */
+QPushButton[class="tag-button-all"] {
+    background-color: palette(base);
+    border: 2px dashed palette(mid);
+    border-radius: 12px;
+    padding: 4px 12px;
+    min-height: 24px;
+    font-size: ${font_size_small}px;
+}
+
+QPushButton[class="tag-button-all"]:hover {
+    background-color: palette(alternate-base);
+    border-color: palette(highlight);
+}
