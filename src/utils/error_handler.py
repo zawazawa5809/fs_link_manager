@@ -9,38 +9,69 @@ from PySide6.QtWidgets import QMessageBox, QWidget
 from ..i18n import tr
 
 
-# ロガー設定
+# Logger configuration
 logger = logging.getLogger(__name__)
 
 
 class AppError(Exception):
-    """アプリケーション基底例外"""
-    def __init__(self, message: str, title: str = None, recoverable: bool = True):
+    """Base exception for application-specific errors.
+
+    Attributes:
+        message: Human-readable error message
+        title: Dialog title for user notifications
+        recoverable: Whether the error allows continuation
+    """
+    def __init__(self, message: str, title: Optional[str] = None, recoverable: bool = True) -> None:
+        """Initialize application error.
+
+        Args:
+            message: Error description
+            title: Optional custom dialog title
+            recoverable: Whether app can continue after error
+        """
         super().__init__(message)
         self.title = title or tr("dialogs.error_title")
         self.recoverable = recoverable
 
 
 class DatabaseError(AppError):
-    """データベース操作エラー"""
-    def __init__(self, message: str):
+    """Database operation error."""
+    def __init__(self, message: str) -> None:
+        """Initialize database error.
+
+        Args:
+            message: Error description
+        """
         super().__init__(message, tr("dialogs.database_error"))
 
 
 class FileOperationError(AppError):
-    """ファイル操作エラー"""
-    def __init__(self, message: str):
+    """File system operation error."""
+    def __init__(self, message: str) -> None:
+        """Initialize file operation error.
+
+        Args:
+            message: Error description
+        """
         super().__init__(message, tr("dialogs.file_error"))
 
 
 class ValidationError(AppError):
-    """バリデーションエラー"""
-    def __init__(self, message: str):
+    """Data validation error."""
+    def __init__(self, message: str) -> None:
+        """Initialize validation error.
+
+        Args:
+            message: Error description
+        """
         super().__init__(message, tr("dialogs.validation_error"))
 
 
 class ErrorReporter:
-    """エラーレポート・通知管理"""
+    """Error reporting and notification management.
+
+    Provides centralized error handling with logging and user notifications.
+    """
 
     @staticmethod
     def report_error(
@@ -48,8 +79,15 @@ class ErrorReporter:
         parent: Optional[QWidget] = None,
         show_dialog: bool = True,
         log_traceback: bool = True
-    ):
-        """エラーを報告・記録"""
+    ) -> None:
+        """Report and log error with optional user notification.
+
+        Args:
+            error: Exception to report
+            parent: Parent widget for dialog (optional)
+            show_dialog: Whether to show error dialog
+            log_traceback: Whether to log full traceback
+        """
         # ログ記録
         if log_traceback:
             logger.error(f"Error occurred: {error}", exc_info=True)
@@ -73,8 +111,14 @@ class ErrorReporter:
                 )
 
     @staticmethod
-    def _show_error_dialog(parent: Optional[QWidget], title: str, message: str):
-        """エラーダイアログを表示"""
+    def _show_error_dialog(parent: Optional[QWidget], title: str, message: str) -> None:
+        """Display error dialog to user.
+
+        Args:
+            parent: Parent widget
+            title: Dialog title
+            message: Error message
+        """
         QMessageBox.critical(parent, title, message)
 
     @staticmethod
@@ -82,8 +126,14 @@ class ErrorReporter:
         message: str,
         parent: Optional[QWidget] = None,
         title: Optional[str] = None
-    ):
-        """警告を報告"""
+    ) -> None:
+        """Report warning message.
+
+        Args:
+            message: Warning description
+            parent: Parent widget for dialog
+            title: Optional custom title
+        """
         logger.warning(message)
         if parent:
             QMessageBox.warning(
@@ -97,8 +147,14 @@ class ErrorReporter:
         message: str,
         parent: Optional[QWidget] = None,
         title: Optional[str] = None
-    ):
-        """情報を報告"""
+    ) -> None:
+        """Report informational message.
+
+        Args:
+            message: Information to display
+            parent: Parent widget for dialog
+            title: Optional custom title
+        """
         logger.info(message)
         if parent:
             QMessageBox.information(
@@ -113,13 +169,22 @@ def handle_errors(
     log_traceback: bool = True,
     return_on_error: Any = None
 ) -> Callable:
-    """
-    統一エラーハンドリングデコレーター
+    """Unified error handling decorator.
 
-    使用例:
+    Automatically catches and reports exceptions with optional user notifications.
+
+    Args:
+        show_dialog: Whether to show error dialog to user
+        log_traceback: Whether to log full stack trace
+        return_on_error: Value to return if error occurs
+
+    Returns:
+        Decorator function
+
+    Example:
         @handle_errors(show_dialog=True)
         def some_method(self, parent_widget):
-            # 処理
+            # Implementation
             pass
     """
     def decorator(func: Callable) -> Callable:
@@ -143,7 +208,15 @@ def handle_errors(
 
 
 def _extract_parent_widget(args: tuple, kwargs: dict) -> Optional[QWidget]:
-    """引数からparent widgetを抽出"""
+    """Extract parent widget from function arguments.
+
+    Args:
+        args: Positional arguments
+        kwargs: Keyword arguments
+
+    Returns:
+        Parent QWidget if found, None otherwise
+    """
     # kwargsから探す
     if 'parent_widget' in kwargs:
         return kwargs['parent_widget']

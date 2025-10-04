@@ -2,7 +2,7 @@
 
 import sqlite3
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Generator, Any
 from pathlib import Path
 from contextlib import contextmanager
 
@@ -13,7 +13,16 @@ from .query_builder import SearchQueryBuilder
 class LinkDatabase:
     """Handles all database operations for links"""
 
-    def __init__(self, db_path: Optional[str] = None, read_only: bool = False):
+    def __init__(self, db_path: Optional[str] = None, read_only: bool = False) -> None:
+        """Initialize database connection.
+
+        Args:
+            db_path: Path to database file (defaults to data/links.db)
+            read_only: Whether to open in read-only mode
+
+        Raises:
+            RuntimeError: If database initialization fails
+        """
         if db_path is None:
             # Default to data/ directory
             data_dir = Path(__file__).parent.parent.parent / "data"
@@ -129,10 +138,16 @@ class LinkDatabase:
                 self.conn.execute("UPDATE links SET position = ? WHERE id = ?;", (pos, id_))
 
     @contextmanager
-    def transaction(self):
-        """トランザクション管理コンテキストマネージャー
+    def transaction(self) -> Generator[sqlite3.Connection, None, None]:
+        """Transaction management context manager.
 
-        使用例:
+        Yields:
+            Database connection for transaction operations
+
+        Raises:
+            RuntimeError: If database is read-only
+
+        Example:
             with db.transaction():
                 db.add_link(...)
                 db.update_link(...)
@@ -147,8 +162,8 @@ class LinkDatabase:
             self.conn.rollback()
             raise
 
-    def close(self):
-        """Close database connection safely"""
+    def close(self) -> None:
+        """Close database connection safely."""
         if self.conn:
             try:
                 self.conn.close()
@@ -156,3 +171,11 @@ class LinkDatabase:
                 pass  # Ignore errors during close
             finally:
                 self.conn = None
+
+    def __enter__(self) -> 'LinkDatabase':
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Context manager exit with automatic cleanup."""
+        self.close()

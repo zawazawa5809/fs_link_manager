@@ -13,7 +13,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_initialization(self):
         """Test LinkRecord initialization with all parameters"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="Test File",
             path="C:\\test\\file.txt",
             tags="tag1,tag2",
@@ -31,7 +31,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_initialization_with_none_tags(self):
         """Test LinkRecord initialization with None tags"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="Test",
             path="C:\\test",
             tags=None,
@@ -44,7 +44,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_with_name_and_tags(self):
         """Test display_text with name and tags"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="My Document",
             path="C:\\documents\\file.docx",
             tags="work,important",
@@ -58,7 +58,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_without_name(self):
         """Test display_text without name (uses basename of path)"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="",
             path="C:\\documents\\file.docx",
             tags="",
@@ -72,7 +72,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_without_tags(self):
         """Test display_text without tags"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="My File",
             path="C:\\test\\file.txt",
             tags="",
@@ -86,7 +86,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_with_root_path(self):
         """Test display_text with root path (no basename)"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="",
             path="C:\\",
             tags="",
@@ -100,7 +100,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_with_unc_path(self):
         """Test display_text with UNC path"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="Network Share",
             path="\\\\server\\share\\folder",
             tags="network",
@@ -114,7 +114,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_with_unicode(self):
         """Test display_text with Unicode characters"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="日本語ファイル",
             path="C:\\ドキュメント\\ファイル.txt",
             tags="日本語,テスト",
@@ -128,7 +128,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_with_emoji(self):
         """Test display_text with emoji"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="Important File 🔥",
             path="C:\\files\\important.txt",
             tags="urgent,🚨",
@@ -142,7 +142,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_with_special_characters(self):
         """Test display_text with special characters"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name='File with "quotes" and & symbols',
             path="C:\\path with spaces\\file's name.txt",
             tags="tag,with,commas",
@@ -157,7 +157,7 @@ class TestLinkRecord(unittest.TestCase):
         """Test display_text with very long name"""
         long_name = "A" * 200
         record = LinkRecord(
-            id_=1,
+            id=1,
             name=long_name,
             path="C:\\test\\file.txt",
             tags="long",
@@ -171,7 +171,7 @@ class TestLinkRecord(unittest.TestCase):
     def test_display_text_empty_name_and_path_only_drive(self):
         """Test display_text when name is empty and path is only a drive letter"""
         record = LinkRecord(
-            id_=1,
+            id=1,
             name="",
             path="D:",
             tags="",

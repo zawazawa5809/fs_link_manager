@@ -6,31 +6,42 @@ from enum import Enum
 
 
 class SearchField(Enum):
-    """検索対象フィールド"""
+    """Search target fields."""
     NAME = "name"
     PATH = "path"
     TAGS = "tags"
-    ALL = "all"  # すべてのフィールド
+    ALL = "all"  # All fields
 
 
 class SearchOperator(Enum):
-    """検索演算子"""
-    CONTAINS = "LIKE"  # 部分一致
-    EQUALS = "="       # 完全一致
-    STARTS_WITH = "LIKE"  # 前方一致
-    ENDS_WITH = "LIKE"    # 後方一致
+    """Search operators for filtering."""
+    CONTAINS = "LIKE"      # Partial match
+    EQUALS = "="           # Exact match
+    STARTS_WITH = "LIKE"   # Prefix match
+    ENDS_WITH = "LIKE"     # Suffix match
 
 
 @dataclass
 class SearchFilter:
-    """検索フィルター条件"""
+    """Search filter condition.
+
+    Attributes:
+        field: Target search field
+        operator: Comparison operator
+        value: Search value
+        case_sensitive: Whether to perform case-sensitive search
+    """
     field: SearchField
     operator: SearchOperator
     value: str
     case_sensitive: bool = False
 
     def to_sql(self) -> Tuple[str, List[str]]:
-        """SQL WHERE句とパラメータに変換"""
+        """Convert filter to SQL WHERE clause and parameters.
+
+        Returns:
+            Tuple of (WHERE clause string, parameter list)
+        """
         # フィールド名
         if self.field == SearchField.ALL:
             fields = ["name", "path", "tags"]
@@ -62,9 +73,14 @@ class SearchFilter:
 
 
 class SearchQueryBuilder:
-    """検索クエリビルダー"""
+    """SQL query builder for link search operations.
 
-    def __init__(self):
+    Provides fluent interface for constructing parameterized SQL queries
+    with support for multiple filters and ordering.
+    """
+
+    def __init__(self) -> None:
+        """Initialize query builder with default settings."""
         self.filters: List[SearchFilter] = []
         self.order_by: str = "position"
         self.order_direction: str = "ASC"
@@ -76,24 +92,53 @@ class SearchQueryBuilder:
         operator: SearchOperator = SearchOperator.CONTAINS,
         case_sensitive: bool = False
     ) -> 'SearchQueryBuilder':
-        """フィルター条件を追加（メソッドチェーン対応）"""
+        """Add filter condition (supports method chaining).
+
+        Args:
+            field: Target field for filtering
+            value: Search value
+            operator: Comparison operator (default: CONTAINS)
+            case_sensitive: Enable case-sensitive search
+
+        Returns:
+            Self for method chaining
+        """
         self.filters.append(SearchFilter(field, operator, value, case_sensitive))
         return self
 
     def simple_search(self, query: str) -> 'SearchQueryBuilder':
-        """簡易検索（全フィールド部分一致）"""
+        """Perform simple search across all fields.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            Self for method chaining
+        """
         if query.strip():
             self.add_filter(SearchField.ALL, query.strip(), SearchOperator.CONTAINS)
         return self
 
     def set_order(self, field: str, direction: str = "ASC") -> 'SearchQueryBuilder':
-        """ソート順を設定"""
+        """Set result ordering.
+
+        Args:
+            field: Field name to order by
+            direction: Sort direction ("ASC" or "DESC")
+
+        Returns:
+            Self for method chaining
+        """
         self.order_by = field
         self.order_direction = direction.upper()
         return self
 
     def build(self) -> Tuple[str, List[str]]:
-        """SQLクエリとパラメータを生成"""
+        """Build SQL query and parameters.
+
+        Returns:
+            Tuple of (SQL query string, parameter list)
+        """
         # 基本クエリ
         base_query = "SELECT id, name, path, tags, position, added_at FROM links"
 
@@ -120,6 +165,10 @@ class SearchQueryBuilder:
         return query, all_params
 
     def clear(self) -> 'SearchQueryBuilder':
-        """フィルター条件をクリア"""
+        """Clear all filter conditions.
+
+        Returns:
+            Self for method chaining
+        """
         self.filters.clear()
         return self

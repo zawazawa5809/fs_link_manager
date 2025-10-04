@@ -10,13 +10,33 @@ from .models import LinkRecord
 
 
 class LinkManager:
-    """High-level link management operations"""
+    """High-level link management operations.
 
-    def __init__(self, db_path: Optional[str] = None):
+    Provides business logic layer for link operations including
+    import/export, validation, and file system integration.
+    """
+
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        """Initialize link manager.
+
+        Args:
+            db_path: Optional database path (defaults to data/links.db)
+        """
         self.db = LinkDatabase(db_path)
 
     def import_links(self, file_path: str) -> int:
-        """Import links from a JSON file with validation"""
+        """Import links from a JSON file with validation.
+
+        Args:
+            file_path: Path to JSON file containing link data
+
+        Returns:
+            Number of successfully imported links
+
+        Raises:
+            ValueError: If file format is invalid or unsupported
+            OSError: If file cannot be read
+        """
         import logging
         logger = logging.getLogger(__name__)
 
@@ -72,8 +92,16 @@ class LinkManager:
 
         return count
 
-    def export_links(self, file_path: str, links: Optional[List[LinkRecord]] = None):
-        """Export links to a JSON file"""
+    def export_links(self, file_path: str, links: Optional[List[LinkRecord]] = None) -> None:
+        """Export links to a JSON file.
+
+        Args:
+            file_path: Destination path for JSON export
+            links: Optional list of links to export (defaults to all)
+
+        Raises:
+            OSError: If file cannot be written
+        """
         if links is None:
             links = self.db.list_links()
 
@@ -93,7 +121,14 @@ class LinkManager:
             json.dump(export_data, f, ensure_ascii=False, indent=2)
 
     def validate_path(self, path: str) -> bool:
-        """Validate if a path exists and is safe"""
+        """Validate if a path exists and is safe.
+
+        Args:
+            path: File system path to validate
+
+        Returns:
+            True if path exists and passes security checks
+        """
         try:
             # 正規化してパストラバーサルを防ぐ
             normalized_path = os.path.normpath(path)
@@ -107,8 +142,16 @@ class LinkManager:
         except (ValueError, OSError):
             return False
 
-    def open_in_explorer(self, path: str):
-        """Open a path in Windows Explorer with security validation"""
+    def open_in_explorer(self, path: str) -> None:
+        """Open a path in Windows Explorer with security validation.
+
+        Args:
+            path: Path to open in Explorer
+
+        Raises:
+            ValueError: If path is invalid or doesn't exist
+            OSError: If Explorer cannot be opened
+        """
         # セキュリティ検証
         if not self.validate_path(path):
             raise ValueError(f"Invalid or non-existent path: {path}")
@@ -122,6 +165,6 @@ class LinkManager:
         else:
             os.startfile(normalized_path)
 
-    def close(self):
-        """Close the database connection"""
+    def close(self) -> None:
+        """Close the database connection."""
         self.db.close()

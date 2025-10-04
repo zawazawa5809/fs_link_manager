@@ -15,6 +15,7 @@ from .widgets import LinkList
 from .widgets.link_list import ViewMode
 from .widgets.factory import WidgetFactory
 from .models import LinkListModel
+from .models.model_roles import LinkModelRoles
 from .controllers import LinkController, ImportExportController
 from .dialogs import SettingsDialog
 
@@ -294,7 +295,7 @@ class MainWindow(QMainWindow):
         index = self.list_view.currentIndex()
         if not index.isValid():
             return None
-        return index.data(Qt.UserRole)
+        return index.data(LinkModelRoles.RecordId)
 
     def get_record(self, id_: int) -> Optional[LinkRecord]:
         """Get record by ID (optimized)"""
@@ -310,7 +311,7 @@ class MainWindow(QMainWindow):
         if not index.isValid():
             return
 
-        record = index.data(Qt.UserRole + 1)
+        record = index.data(LinkModelRoles.RecordData)
         if record:
             self.link_controller.open_link(record.path)
 

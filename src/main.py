@@ -63,7 +63,16 @@ def main():
     window.show()
 
     logger.info("Application started successfully")
-    return app.exec()
+
+    try:
+        return app.exec()
+    finally:
+        # Ensure cleanup on exit
+        logger.info("Application shutting down")
+        if hasattr(window, 'db'):
+            window.db.close()
+        if hasattr(window, 'manager'):
+            window.manager.close()
 
 
 if __name__ == "__main__":

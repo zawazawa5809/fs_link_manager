@@ -289,31 +289,52 @@ class ThemeManager(QObject):
         }}
         """
 
-    def _repolish_widgets(self):
-        """すべてのウィジェットを再描画（最適化版）"""
-        # トップレベルウィジェットのみ処理し、カスケードさせる
+    def _repolish_widgets(self) -> None:
+        """Repolish all widgets efficiently (optimized version).
+
+        Only processes visible top-level widgets and their visible children
+        to minimize performance impact during theme changes.
+        """
+        # Process only top-level widgets and cascade
         for widget in self.app.topLevelWidgets():
             if widget.isVisible():
                 self._repolish_widget_tree(widget)
 
-    def _repolish_widget_tree(self, widget: QWidget):
-        """ウィジェットツリーを再帰的に再描画"""
-        widget.style().unpolish(widget)
-        widget.style().polish(widget)
+    def _repolish_widget_tree(self, widget: QWidget) -> None:
+        """Recursively repolish widget tree (optimized).
+
+        Args:
+            widget: Root widget to repolish
+
+        Note:
+            Only visible widgets are processed to improve performance.
+            Non-recursive approach for better stack efficiency.
+        """
+        # Process widget itself
+        style = widget.style()
+        style.unpolish(widget)
+        style.polish(widget)
         try:
             widget.update()
-        except TypeError:
+        except (TypeError, RuntimeError):
             pass
 
-        # 子ウィジェットも処理（visible のみ）
-        for child in widget.findChildren(QWidget):
-            if child.isVisible():
-                child.style().unpolish(child)
-                child.style().polish(child)
-                try:
-                    child.update()
-                except TypeError:
-                    pass
+        # Process visible children only (non-recursive for large trees)
+        widgets_to_process = [widget]
+        while widgets_to_process:
+            current = widgets_to_process.pop(0)
+            for child in current.children():
+                if isinstance(child, QWidget) and child.isVisible():
+                    style = child.style()
+                    style.unpolish(child)
+                    style.polish(child)
+                    try:
+                        child.update()
+                    except (TypeError, RuntimeError):
+                        pass
+                    # Add to queue if has children
+                    if child.children():
+                        widgets_to_process.append(child)
 
     def get_current_theme(self) -> Optional[str]:
         """現在のテーマ名を取得"""
