@@ -34,8 +34,12 @@ class ThemedListDelegate(QStyledItemDelegate):
     def _get_contrast_text_color(self, palette, is_selected: bool) -> QColor:
         """選択状態に応じて適切なコントラストのテキスト色を取得"""
         if is_selected:
-            # 選択時は常に白を使用（全テーマで統一的な視認性）
-            return QColor('#ffffff')
+            # テーマで定義された選択時のテキスト色を使用
+            selection_color = self.theme_manager.get_color('selection_text')
+            # フォールバック: 空の色（黒）の場合は白を使用
+            if not selection_color.isValid() or selection_color.name() == '#000000':
+                return QColor('#ffffff')
+            return selection_color
         else:
             return palette.color(QPalette.WindowText)
 
@@ -64,8 +68,13 @@ class ThemedListDelegate(QStyledItemDelegate):
 
         # Draw background
         if is_selected:
-            painter.fillRect(rect, palette.color(QPalette.Highlight).lighter(VC.HIGHLIGHT_LIGHTNESS))
-            painter.setPen(QPen(palette.color(QPalette.Highlight), 1))
+            # テーマで定義された選択背景色を使用
+            selection_bg = self.theme_manager.get_color('selection_background')
+            # フォールバック: 無効な色の場合はパレットのハイライト色を使用
+            if not selection_bg.isValid() or selection_bg.name() == '#000000':
+                selection_bg = palette.color(QPalette.Highlight)
+            painter.fillRect(rect, selection_bg)
+            painter.setPen(QPen(selection_bg.darker(110), 1))
             painter.drawRect(rect.adjusted(0, 0, -1, -1))
         elif is_hover:
             painter.fillRect(rect, palette.color(QPalette.AlternateBase))
@@ -173,8 +182,12 @@ class ThemedCardDelegate(QStyledItemDelegate):
     def _get_contrast_text_color(self, palette, is_selected: bool) -> QColor:
         """選択状態に応じて適切なコントラストのテキスト色を取得"""
         if is_selected:
-            # 選択時は常に白を使用（全テーマで統一的な視認性）
-            return QColor('#ffffff')
+            # テーマで定義された選択時のテキスト色を使用
+            selection_color = self.theme_manager.get_color('selection_text')
+            # フォールバック: 空の色（黒）の場合は白を使用
+            if not selection_color.isValid() or selection_color.name() == '#000000':
+                return QColor('#ffffff')
+            return selection_color
         else:
             return palette.color(QPalette.WindowText)
 
@@ -217,8 +230,12 @@ class ThemedCardDelegate(QStyledItemDelegate):
         # Use palette colors
         palette = QApplication.palette()
         if is_selected:
-            bg_color = palette.color(QPalette.Highlight)
-            painter.setPen(QPen(palette.color(QPalette.Highlight).darker(VC.HIGHLIGHT_BORDER_DARKNESS), 2))
+            # テーマで定義された選択背景色を使用
+            bg_color = self.theme_manager.get_color('selection_background')
+            # フォールバック: 無効な色の場合はパレットのハイライト色を使用
+            if not bg_color.isValid() or bg_color.name() == '#000000':
+                bg_color = palette.color(QPalette.Highlight)
+            painter.setPen(QPen(bg_color.darker(110), 2))
         elif is_hover:
             bg_color = palette.color(QPalette.AlternateBase)
             painter.setPen(QPen(palette.color(QPalette.Mid), 1))

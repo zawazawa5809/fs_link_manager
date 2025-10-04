@@ -14,10 +14,6 @@ class VisualConstants:
     # Icon background lightness
     ICON_BG_LIGHTNESS: ClassVar[int] = 168
 
-    # Highlight colors
-    HIGHLIGHT_LIGHTNESS: ClassVar[int] = 150
-    HIGHLIGHT_BORDER_DARKNESS: ClassVar[int] = 110
-
     # List delegate dimensions
     LIST_ITEM_HEIGHT: ClassVar[int] = 90
     LIST_PADDING: ClassVar[int] = 12

@@ -82,7 +82,10 @@ class ThemeManager(QObject):
                 'success': '#4caf50',
                 'warning': '#ff9800',
                 'danger': '#f44336',
-                'info': '#2196f3'
+                'info': '#2196f3',
+                # Selection colors (高コントラスト)
+                'selection_background': '#2f6fff',
+                'selection_text': '#ffffff'
             },
             'dimensions': {
                 'border_radius': 6,
@@ -128,7 +131,10 @@ class ThemeManager(QObject):
                 'success': '#4caf50',
                 'warning': '#ff9800',
                 'danger': '#f44336',
-                'info': '#00bcd4'
+                'info': '#00bcd4',
+                # Selection colors (高コントラスト)
+                'selection_background': '#2196f3',
+                'selection_text': '#ffffff'
             },
             'dimensions': {
                 'border_radius': 6,
@@ -147,51 +153,6 @@ class ThemeManager(QObject):
             }
         }
 
-        self.themes['dark_high_contrast'] = {
-            'name': 'Dark High Contrast',
-            'colors': {
-                'window': '#000000',
-                'window_text': '#ffffff',
-                'base': '#0a0a0a',
-                'alternate_base': '#1a1a1a',
-                'text': '#ffffff',
-                'button': '#1a1a1a',
-                'button_text': '#ffffff',
-                'bright_text': '#ffff00',
-                'highlight': '#00ff00',
-                'highlighted_text': '#000000',
-                'link': '#00ffff',
-                'link_visited': '#ff00ff',
-                'mid': '#808080',
-                'shadow': '#000000',
-                'light': '#404040',
-                'disabled_text': '#808080',
-                # Semantic colors
-                'primary': '#00ff00',
-                'primary_light': '#66ff66',
-                'primary_dark': '#00cc00',
-                'secondary': '#808080',
-                'success': '#00ff00',
-                'warning': '#ffff00',
-                'danger': '#ff0000',
-                'info': '#00ffff'
-            },
-            'dimensions': {
-                'border_radius': 4,
-                'padding': 10,
-                'padding_small': 6,
-                'padding_large': 14,
-                'spacing': 10,
-                'min_button_height': 40,
-                'font_family': 'Noto Sans CJK JP, Yu Gothic UI, Meiryo UI, Segoe UI, sans-serif',
-                'font_size': 14,
-                'font_size_small': 12,
-                'font_size_large': 17,
-                'icon_size': 24,
-                'icon_size_small': 20,
-                'icon_size_large': 28
-            }
-        }
 
     def restore_theme(self, theme_name: str):
         """外部から指定されたテーマを復元"""

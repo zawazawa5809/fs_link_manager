@@ -221,6 +221,13 @@ class MainWindow(QMainWindow):
         self.list_view.customContextMenuRequested.connect(self.open_context_menu)
         self.list_view.doubleClicked.connect(self.on_item_double_clicked)
 
+        # 保存された表示モードを復元
+        saved_mode = self.settings_manager.settings.default_view_mode
+        if saved_mode == "grid":
+            self.list_view.set_view_mode(ViewMode.GRID)
+        else:
+            self.list_view.set_view_mode(ViewMode.LIST)
+
         # Apply shadow effect
         WidgetFactory.apply_shadow_effect(self.list_view)
 
@@ -234,7 +241,13 @@ class MainWindow(QMainWindow):
     def _switch_view_mode(self, index):
         """Switch view mode from menu"""
         modes = [ViewMode.LIST, ViewMode.GRID]
-        self.list_view.set_view_mode(modes[index])
+        mode = modes[index]
+        self.list_view.set_view_mode(mode)
+
+        # 設定を保存
+        mode_str = "list" if index == 0 else "grid"
+        self.settings_manager.update_view_settings(default_view_mode=mode_str)
+
         self.reload_list()
 
     def _apply_theme_from_menu(self, theme_key: str):
@@ -366,6 +379,12 @@ class MainWindow(QMainWindow):
         logger = logging.getLogger(__name__)
 
         try:
+            # 現在の表示モードを保存
+            if hasattr(self, 'list_view') and self.list_view:
+                current_mode = "grid" if self.list_view._view_mode == ViewMode.GRID else "list"
+                self.settings_manager.settings.default_view_mode = current_mode
+                self.settings_manager.save_settings()
+
             # データベース接続を安全にクローズ
             if hasattr(self, 'db') and self.db:
                 try:
