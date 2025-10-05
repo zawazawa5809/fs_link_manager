@@ -229,6 +229,13 @@ class MainWindow(QMainWindow):
         self.list_view.customContextMenuRequested.connect(self.open_context_menu)
         self.list_view.doubleClicked.connect(self.on_item_double_clicked)
 
+        # Set model (only once)
+        self.list_view.setModel(self.model)
+
+        # Re-enable drops after setModel (setModel may reset acceptDrops)
+        self.list_view.setAcceptDrops(True)
+        self.list_view.viewport().setAcceptDrops(True)
+
         # 保存された表示モードを復元
         saved_mode = self.settings_manager.settings.default_view_mode
         if saved_mode == "grid":
@@ -299,8 +306,8 @@ class MainWindow(QMainWindow):
 
         records = self.link_controller.search_links_with_builder(builder)
 
+        # Update model data only (don't reset the model)
         self.model.update_records(records)
-        self.list_view.setModel(self.model)
 
         # タグ一覧を更新(再帰を避けるため直接SQLクエリ)
         all_tags = self.manager.get_all_tags()

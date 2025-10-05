@@ -120,3 +120,25 @@ class LinkListModel(QAbstractListModel):
                 self.dataChanged.emit(index, index, [Qt.DisplayRole, LinkModelRoles.RecordData])
                 return True
         return False
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        """Return item flags for the given index.
+
+        Args:
+            index: Model index
+
+        Returns:
+            Item flags enabling drag/drop support
+        """
+        default_flags = super().flags(index)
+        if index.isValid():
+            return default_flags | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
+        return default_flags | Qt.ItemIsDropEnabled
+
+    def supportedDropActions(self) -> Qt.DropActions:
+        """Return supported drop actions.
+
+        Returns:
+            Supported drop actions (Move and Copy)
+        """
+        return Qt.MoveAction | Qt.CopyAction

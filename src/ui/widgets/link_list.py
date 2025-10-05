@@ -26,10 +26,13 @@ class LinkList(QListView):
         super().__init__(parent)
         self.setSelectionMode(QListView.SingleSelection)
         self.setAcceptDrops(True)
-        self.setDragEnabled(True)
-        self.setDragDropMode(QListView.DragDrop)
+        self.setDragEnabled(False)
+        self.setDragDropMode(QListView.NoDragDrop)
         self.setAlternatingRowColors(False)
         self.setUniformItemSizes(False)
+
+        # Enable drops on viewport as well
+        self.viewport().setAcceptDrops(True)
 
         # View modes
         self._view_mode = ViewMode.LIST
@@ -63,12 +66,15 @@ class LinkList(QListView):
             self.setSpacing(2)
             self.setMovement(QListView.Free)
 
+        # Re-enable drops on viewport after view mode change
+        self.viewport().setAcceptDrops(True)
         self.viewport().update()
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         """Handle drag enter events"""
         if event.mimeData().hasUrls() or event.mimeData().hasText():
             event.acceptProposedAction()
+            event.accept()
         else:
             event.ignore()
 
@@ -76,12 +82,13 @@ class LinkList(QListView):
         """Handle drag move events"""
         if event.mimeData().hasUrls() or event.mimeData().hasText():
             event.acceptProposedAction()
+            event.accept()
         else:
             event.ignore()
 
     def dropEvent(self, event: QDropEvent):
         """Handle drop events for external files"""
-        # Handle URL drops (files/folders)
+        # Handle URL drops (files/folders from Explorer)
         if event.mimeData().hasUrls():
             pairs = []
             for url in event.mimeData().urls():
@@ -92,22 +99,23 @@ class LinkList(QListView):
             if pairs:
                 self.linkDropped.emit(pairs)
                 event.acceptProposedAction()
+                event.accept()
                 return
 
         # Handle text drops (paths)
         if event.mimeData().hasText():
             text = event.mimeData().text().strip()
-            if text:
-                pairs = []
-                for line in text.splitlines():
-                    p = line.strip().strip('"')
-                    if p:
-                        name = os.path.basename(p) or p
-                        pairs.append((name, p))
-                if pairs:
-                    self.linkDropped.emit(pairs)
-                    event.acceptProposedAction()
-                    return
+            pairs = []
+            for line in text.splitlines():
+                p = line.strip().strip('"')
+                if p:
+                    name = os.path.basename(p) or p
+                    pairs.append((name, p))
+            if pairs:
+                self.linkDropped.emit(pairs)
+                event.acceptProposedAction()
+                event.accept()
+                return
 
-        # Default to parent implementation for internal moves
-        super().dropEvent(event)
+        # Ignore unhandled drops
+        event.ignore()
