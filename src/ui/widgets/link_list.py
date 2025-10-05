@@ -27,7 +27,7 @@ class LinkList(QListView):
         self.setSelectionMode(QListView.SingleSelection)
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
-        self.setDragDropMode(QListView.InternalMove)
+        self.setDragDropMode(QListView.DragDrop)
         self.setAlternatingRowColors(False)
         self.setUniformItemSizes(False)
 

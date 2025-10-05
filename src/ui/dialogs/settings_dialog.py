@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QLabel, QSlider, QComboBox, QCheckBox, QSpinBox,
-    QDialogButtonBox, QGroupBox, QFormLayout
+    QDialogButtonBox, QGroupBox, QFormLayout, QLineEdit
 )
 from PySide6.QtCore import Qt, Signal
 
@@ -50,6 +50,10 @@ class SettingsDialog(QDialog):
         # 一般タブ
         general_tab = self._create_general_tab()
         tabs.addTab(general_tab, tr("settings.tabs.general"))
+
+        # タグタブ
+        tag_tab = self._create_tag_tab()
+        tabs.addTab(tag_tab, tr("settings.tabs.tags"))
 
         layout.addWidget(tabs)
 
@@ -218,6 +222,55 @@ class SettingsDialog(QDialog):
         layout.addStretch()
         return widget
 
+    def _create_tag_tab(self) -> QWidget:
+        """タグタブを作成"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(20)
+
+        # タグ設定グループ
+        tag_group = QGroupBox(tr("settings.tags.tag_settings"))
+        tag_layout = QFormLayout()
+        tag_layout.setSpacing(12)
+
+        # デフォルトタグ入力
+        self.default_tags_field = WidgetFactory.create_input_field(
+            tr("settings.tags.default_tags_placeholder"), "text"
+        )
+        tag_layout.addRow(tr("settings.tags.default_tags"), self.default_tags_field)
+
+        # ヘルプテキスト
+        hint_label = WidgetFactory.create_label(
+            tr("settings.tags.default_tags_hint"), "caption"
+        )
+        hint_label.setWordWrap(True)
+        tag_layout.addRow("", hint_label)
+
+        tag_group.setLayout(tag_layout)
+        layout.addWidget(tag_group)
+
+        # 自動タグ付け設定グループ
+        auto_tag_group = QGroupBox()
+        auto_tag_layout = QVBoxLayout()
+        auto_tag_layout.setSpacing(12)
+
+        # 自動タグ有効化チェックボックス
+        self.auto_tag_check = QCheckBox(tr("settings.tags.auto_tag_enabled"))
+        auto_tag_layout.addWidget(self.auto_tag_check)
+
+        # ヘルプテキスト
+        auto_hint_label = WidgetFactory.create_label(
+            tr("settings.tags.auto_tag_hint"), "caption"
+        )
+        auto_hint_label.setWordWrap(True)
+        auto_tag_layout.addWidget(auto_hint_label)
+
+        auto_tag_group.setLayout(auto_tag_layout)
+        layout.addWidget(auto_tag_group)
+
+        layout.addStretch()
+        return widget
+
     def _update_scale_label(self, value: int):
         """スケールラベルを更新"""
         scale_map = {
@@ -270,6 +323,10 @@ class SettingsDialog(QDialog):
         self.auto_save_check.setChecked(settings.auto_save)
         self.show_count_check.setChecked(settings.show_item_count)
 
+        # タグ設定
+        self.default_tags_field.setText(settings.default_tags)
+        self.auto_tag_check.setChecked(settings.auto_tag_enabled)
+
     def _apply_settings(self):
         """設定を適用"""
         # フォント設定
@@ -314,6 +371,12 @@ class SettingsDialog(QDialog):
         self.settings_manager.settings.auto_save = self.auto_save_check.isChecked()
         self.settings_manager.settings.show_item_count = self.show_count_check.isChecked()
         self.settings_manager.save_settings()
+
+        # タグ設定
+        self.settings_manager.update_tag_settings(
+            self.default_tags_field.text(),
+            auto_tag_enabled=self.auto_tag_check.isChecked()
+        )
 
         self.settings_applied.emit()
 

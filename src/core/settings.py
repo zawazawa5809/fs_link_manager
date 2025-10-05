@@ -25,6 +25,10 @@ class AppSettings:
     auto_save: bool = True
     show_item_count: bool = True
 
+    # タグ設定
+    default_tags: str = ""  # 新規リンクのデフォルトタグ(カンマ区切り)
+    auto_tag_enabled: bool = True  # ファイル種別自動タグ付けを有効化
+
 
 class SettingsManager(QObject):
     """アプリケーション設定マネージャー"""
@@ -69,6 +73,10 @@ class SettingsManager(QObject):
         self.settings.auto_save = self.qsettings.value("general/auto_save", True, type=bool)
         self.settings.show_item_count = self.qsettings.value("general/show_item_count", True, type=bool)
 
+        # タグ設定
+        self.settings.default_tags = self.qsettings.value("tags/default_tags", "")
+        self.settings.auto_tag_enabled = self.qsettings.value("tags/auto_tag_enabled", True, type=bool)
+
     def save_settings(self):
         """設定を保存"""
         # 外観設定
@@ -86,6 +94,10 @@ class SettingsManager(QObject):
         # 一般設定
         self.qsettings.setValue("general/auto_save", self.settings.auto_save)
         self.qsettings.setValue("general/show_item_count", self.settings.show_item_count)
+
+        # タグ設定
+        self.qsettings.setValue("tags/default_tags", self.settings.default_tags)
+        self.qsettings.setValue("tags/auto_tag_enabled", self.settings.auto_tag_enabled)
 
         self.qsettings.sync()
         self.settings_changed.emit()
@@ -129,6 +141,18 @@ class SettingsManager(QObject):
         if changed:
             self.save_settings()
             self.view_settings_changed.emit()
+
+    def update_tag_settings(self, default_tags: str, auto_tag_enabled: Optional[bool] = None):
+        """タグ設定を更新"""
+        changed = False
+        if self.settings.default_tags != default_tags:
+            self.settings.default_tags = default_tags
+            changed = True
+        if auto_tag_enabled is not None and self.settings.auto_tag_enabled != auto_tag_enabled:
+            self.settings.auto_tag_enabled = auto_tag_enabled
+            changed = True
+        if changed:
+            self.save_settings()
 
     def reset_to_defaults(self):
         """デフォルト設定にリセット"""

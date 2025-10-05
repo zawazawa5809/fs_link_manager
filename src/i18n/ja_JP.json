@@ -75,7 +75,8 @@
     "tabs": {
       "appearance": "外観",
       "view": "表示",
-      "general": "一般"
+      "general": "一般",
+      "tags": "タグ"
     },
     "appearance": {
       "font_settings": "フォント設定",
@@ -104,6 +105,14 @@
       "behavior_settings": "動作設定",
       "auto_save": "自動保存を有効にする",
       "show_item_count": "アイテム数を表示する"
+    },
+    "tags": {
+      "tag_settings": "タグ設定",
+      "default_tags": "デフォルトタグ:",
+      "default_tags_hint": "新規リンク追加時に自動的に付与されるタグ(カンマ区切り)",
+      "default_tags_placeholder": "例: 重要, 作業中",
+      "auto_tag_enabled": "ファイル種別に応じた自動タグ付けを有効にする",
+      "auto_tag_hint": "有効にすると、フォルダには「フォルダ」、ファイルには「ファイル」と拡張子タグが自動で付与されます"
     },
     "reset_defaults": "デフォルトに戻す",
     "ok": "OK",

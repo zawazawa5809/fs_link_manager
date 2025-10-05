@@ -7,8 +7,9 @@ from PySide6.QtWidgets import QMessageBox
 
 from ...core import LinkDatabase, LinkRecord, LinkManager
 from ...core.query_builder import SearchQueryBuilder
+from ...core.settings import SettingsManager
 from ...i18n import tr
-from ...utils import handle_errors, DatabaseError
+from ...utils import handle_errors, DatabaseError, generate_auto_tags, merge_tags
 from ..dialogs import LinkAddDialog, LinkEditDialog
 
 
@@ -23,6 +24,7 @@ class LinkController(QObject):
         super().__init__(parent)
         self.db = db
         self.manager = manager
+        self.settings_manager = SettingsManager()
 
     def add_links_from_dialog(self, parent_widget) -> bool:
         """ダイアログからリンクを追加"""
@@ -40,18 +42,19 @@ class LinkController(QObject):
     def add_links_from_drops(self, pairs: List[Tuple[str, str]]):
         """ドロップされたリンクを追加"""
         for name, path in pairs:
-            # Auto-generate tags
-            tags = []
-            ext = os.path.splitext(path)[1].lower()
-            if ext:
-                tags.append(ext[1:].upper())
-            if os.path.isdir(path):
-                tags.append(tr("tags.folder"))
+            # デフォルトタグと自動タグを適用
+            default_tags = self.settings_manager.settings.default_tags
+
+            if self.settings_manager.settings.auto_tag_enabled:
+                auto_tags = generate_auto_tags(path)
+                merged_tags = merge_tags(default_tags, auto_tags)
+            else:
+                merged_tags = default_tags
 
             self.db.add_link(
                 name=name,
                 path=path,
-                tags=", ".join(tags) if tags else ""
+                tags=merged_tags
             )
 
         self.links_updated.emit()

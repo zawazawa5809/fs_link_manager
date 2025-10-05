@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from ...core import LinkRecord
+from ...core import LinkRecord, SettingsManager
 from ...i18n import tr
 from ..widgets.factory import WidgetFactory
 
@@ -23,7 +23,9 @@ class LinkAddDialog(QDialog):
         self.resize(500, 200)
 
         self.path = ""
+        self.settings_manager = SettingsManager()
         self._setup_ui()
+        self._load_default_tags()
 
     def _setup_ui(self):
         """UIをセットアップ"""
@@ -79,6 +81,32 @@ class LinkAddDialog(QDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
+    def _load_default_tags(self):
+        """デフォルトタグを読み込み"""
+        default_tags = self.settings_manager.settings.default_tags
+        if default_tags:
+            self.tags_field.setText(default_tags)
+
+    def _apply_auto_tags(self, path: str):
+        """パスに応じた自動タグを適用"""
+        from ...utils import generate_auto_tags, merge_tags
+
+        # 自動タグ機能が無効の場合は何もしない
+        if not self.settings_manager.settings.auto_tag_enabled:
+            return
+
+        # デフォルトタグを取得
+        default_tags = self.settings_manager.settings.default_tags
+
+        # 自動タグを生成
+        auto_tags = generate_auto_tags(path)
+
+        # デフォルトタグと自動タグをマージ
+        merged_tags = merge_tags(default_tags, auto_tags)
+
+        # タグフィールドに設定
+        self.tags_field.setText(merged_tags)
+
     def _browse_path(self):
         """パスを参照"""
         dlg = QFileDialog(self, tr("dialogs.select_link_target"))
@@ -91,6 +119,8 @@ class LinkAddDialog(QDialog):
                 # 自動的に名前を設定
                 if not self.name_field.text():
                     self.name_field.setText(os.path.basename(self.path))
+                # 自動タグを適用
+                self._apply_auto_tags(self.path)
 
     def get_values(self) -> Tuple[str, str, str]:
         """入力値を取得"""
