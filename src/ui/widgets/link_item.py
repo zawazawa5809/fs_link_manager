@@ -19,15 +19,22 @@ class ThemedListDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.theme_manager = ThemeManager()
         self.settings_manager = SettingsManager()
-        self.item_height = VC.LIST_ITEM_HEIGHT
+        self.item_height = self.settings_manager.settings.list_item_height
         self.padding = VC.LIST_PADDING
         self.icon_size = VC.LIST_ICON_SIZE
 
         # Connect to settings changes for live updates
         self.settings_manager.font_settings_changed.connect(self._on_font_settings_changed)
+        self.settings_manager.view_settings_changed.connect(self._on_view_settings_changed)
 
     def _on_font_settings_changed(self):
         """Handle font settings change - trigger repaint"""
+        if self.parent():
+            self.parent().viewport().update()
+
+    def _on_view_settings_changed(self):
+        """Handle view settings change - update item height"""
+        self.item_height = self.settings_manager.settings.list_item_height
         if self.parent():
             self.parent().viewport().update()
 
@@ -88,7 +95,11 @@ class ThemedListDelegate(QStyledItemDelegate):
         )
 
         # Draw file type icon
-        if os.path.isdir(record.path):
+        if record.custom_icon:
+            # カスタムアイコンが設定されている場合はそれを使用
+            emoji = record.custom_icon
+            icon_color = self.theme_manager.get_color('primary')
+        elif os.path.isdir(record.path):
             emoji = FI.FOLDER
             icon_color = self.theme_manager.get_color('primary')
         else:
@@ -166,16 +177,24 @@ class ThemedCardDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.theme_manager = ThemeManager()
         self.settings_manager = SettingsManager()
-        self.card_width = VC.CARD_WIDTH
-        self.card_height = VC.CARD_HEIGHT
+        self.card_width = self.settings_manager.settings.grid_card_width
+        self.card_height = self.settings_manager.settings.grid_card_height
         self.padding = VC.CARD_PADDING
         self.icon_size = VC.CARD_ICON_SIZE
 
         # Connect to settings changes for live updates
         self.settings_manager.font_settings_changed.connect(self._on_font_settings_changed)
+        self.settings_manager.view_settings_changed.connect(self._on_view_settings_changed)
 
     def _on_font_settings_changed(self):
         """Handle font settings change - trigger repaint"""
+        if self.parent():
+            self.parent().viewport().update()
+
+    def _on_view_settings_changed(self):
+        """Handle view settings change - update card size"""
+        self.card_width = self.settings_manager.settings.grid_card_width
+        self.card_height = self.settings_manager.settings.grid_card_height
         if self.parent():
             self.parent().viewport().update()
 
@@ -258,7 +277,11 @@ class ThemedCardDelegate(QStyledItemDelegate):
         )
 
         # Draw file type icon
-        if os.path.isdir(record.path):
+        if record.custom_icon:
+            # カスタムアイコンが設定されている場合はそれを使用
+            emoji = record.custom_icon
+            icon_color = self.theme_manager.get_color('primary')
+        elif os.path.isdir(record.path):
             emoji = FI.FOLDER
             icon_color = self.theme_manager.get_color('primary')
         else:

@@ -62,27 +62,37 @@ class LinkDatabase:
                 path TEXT NOT NULL,
                 tags TEXT,
                 position INTEGER NOT NULL,
-                added_at TEXT NOT NULL
+                added_at TEXT NOT NULL,
+                custom_icon TEXT
             );
             """
         )
         self.conn.commit()
+        
+        # マイグレーション: 既存テーブルにcustom_iconカラムを追加
+        try:
+            self.conn.execute("SELECT custom_icon FROM links LIMIT 1;")
+        except sqlite3.OperationalError:
+            # カラムが存在しない場合は追加
+            self.conn.execute("ALTER TABLE links ADD COLUMN custom_icon TEXT;")
+            self.conn.commit()
 
-    def add_link(self, name: str, path: str, tags: str = "") -> int:
+    def add_link(self, name: str, path: str, tags: str = "", custom_icon: str = "") -> int:
         """Add a new link to the database"""
         cur = self.conn.cursor()
         cur.execute("SELECT COALESCE(MAX(position), -1) + 1 FROM links;")
         next_pos = cur.fetchone()[0]
         added_at = datetime.now().isoformat(timespec="seconds")
         cur.execute(
-            "INSERT INTO links(name, path, tags, position, added_at) VALUES (?, ?, ?, ?, ?);",
-            (name, path, tags, next_pos, added_at),
+            "INSERT INTO links(name, path, tags, position, added_at, custom_icon) VALUES (?, ?, ?, ?, ?, ?);",
+            (name, path, tags, next_pos, added_at, custom_icon),
         )
         self.conn.commit()
         return cur.lastrowid
 
     def update_link(self, id_: int, *, name: Optional[str] = None,
-                   path: Optional[str] = None, tags: Optional[str] = None):
+                   path: Optional[str] = None, tags: Optional[str] = None,
+                   custom_icon: Optional[str] = None):
         """Update an existing link"""
         sets = []
         vals = []
@@ -95,6 +105,9 @@ class LinkDatabase:
         if tags is not None:
             sets.append("tags = ?")
             vals.append(tags)
+        if custom_icon is not None:
+            sets.append("custom_icon = ?")
+            vals.append(custom_icon)
         if not sets:
             return
         vals.append(id_)
@@ -126,7 +139,7 @@ class LinkDatabase:
         """Get a single link by ID (optimized for O(1) access)"""
         cur = self.conn.cursor()
         row = cur.execute(
-            "SELECT id, name, path, tags, position, added_at FROM links WHERE id = ?",
+            "SELECT id, name, path, tags, position, added_at, custom_icon FROM links WHERE id = ?",
             (id_,)
         ).fetchone()
         return LinkRecord(*row) if row else None

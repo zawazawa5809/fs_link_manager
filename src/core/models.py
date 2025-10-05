@@ -16,6 +16,7 @@ class LinkRecord:
         tags: Comma-separated tag string
         position: Display order position
         added_at: ISO 8601 timestamp of creation
+        custom_icon: Custom emoji icon (optional)
     """
     id: int
     name: str
@@ -23,10 +24,12 @@ class LinkRecord:
     tags: str
     position: int
     added_at: str
+    custom_icon: str = ""
 
     def __post_init__(self):
-        """Normalize tags to ensure consistency."""
+        """Normalize tags and custom_icon to ensure consistency."""
         self.tags = self.tags or ""
+        self.custom_icon = self.custom_icon or ""
 
     def display_text(self) -> str:
         """Get display text for the link.

@@ -140,7 +140,7 @@ class SearchQueryBuilder:
             Tuple of (SQL query string, parameter list)
         """
         # 基本クエリ
-        base_query = "SELECT id, name, path, tags, position, added_at FROM links"
+        base_query = "SELECT id, name, path, tags, position, added_at, custom_icon FROM links"
 
         # WHERE句の構築
         if not self.filters:

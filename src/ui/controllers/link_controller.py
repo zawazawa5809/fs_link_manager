@@ -30,9 +30,9 @@ class LinkController(QObject):
         """ダイアログからリンクを追加"""
         dialog = LinkAddDialog(parent_widget)
         if dialog.exec():
-            name, path, tags = dialog.get_values()
+            name, path, tags, custom_icon = dialog.get_values()
             if path:
-                self.db.add_link(name=name, path=path, tags=tags)
+                self.db.add_link(name=name, path=path, tags=tags, custom_icon=custom_icon)
                 self.links_updated.emit()
                 self.status_message.emit(tr("status.items_added", count=1), 3000)
                 return True
@@ -68,8 +68,8 @@ class LinkController(QObject):
         """リンクを編集"""
         dialog = LinkEditDialog(record, parent_widget)
         if dialog.exec():
-            name, tags = dialog.get_values()
-            self.db.update_link(record.id, name=name, tags=tags)
+            name, tags, custom_icon = dialog.get_values()
+            self.db.update_link(record.id, name=name, tags=tags, custom_icon=custom_icon)
             self.links_updated.emit()
             return True
         return False

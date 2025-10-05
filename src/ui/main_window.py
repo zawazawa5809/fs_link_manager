@@ -288,6 +288,11 @@ class MainWindow(QMainWindow):
 
     def _on_settings_applied(self):
         """Handle settings applied"""
+        # ビューを強制的に再描画してサイズ変更を反映
+        if hasattr(self, 'list_view'):
+            self.list_view.viewport().update()
+            # レイアウトを再計算
+            self.list_view.scheduleDelayedItemsLayout()
         self.status_bar.showMessage(tr("status.settings_applied"), 2000)
 
     def _show_status_message(self, message: str, timeout_ms: int):

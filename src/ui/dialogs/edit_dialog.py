@@ -4,7 +4,7 @@ import os
 from typing import Optional, Tuple
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel,
-    QDialogButtonBox, QFileDialog, QPushButton
+    QDialogButtonBox, QFileDialog, QPushButton, QGridLayout
 )
 from PySide6.QtCore import Qt
 
@@ -20,7 +20,7 @@ class LinkAddDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(tr("dialogs.add_link"))
         self.setModal(True)
-        self.resize(500, 200)
+        self.resize(500, 420)
 
         self.path = ""
         self.settings_manager = SettingsManager()
@@ -73,6 +73,42 @@ class LinkAddDialog(QDialog):
 
         layout.addLayout(tags_layout)
 
+        # カスタムアイコン選択
+        icon_layout = QVBoxLayout()
+        icon_header_layout = QHBoxLayout()
+        icon_label = WidgetFactory.create_label("アイコン:", "default")
+        icon_header_layout.addWidget(icon_label)
+
+        self.icon_field = WidgetFactory.create_input_field("絵文字を入力", "text")
+        self.icon_field.setMaxLength(2)  # 絵文字は通常1-2文字
+        icon_header_layout.addWidget(self.icon_field)
+
+        clear_icon_btn = WidgetFactory.create_button("デフォルトに戻す", "secondary")
+        clear_icon_btn.clicked.connect(lambda: self.icon_field.clear())
+        icon_header_layout.addWidget(clear_icon_btn)
+
+        icon_layout.addLayout(icon_header_layout)
+
+        # よく使う絵文字のプリセット
+        preset_label = WidgetFactory.create_label("よく使う絵文字:", "default")
+        icon_layout.addWidget(preset_label)
+
+        emoji_presets = [
+            "📁", "📄", "📷", "🎵", "🎬", "📚", "💻", "🎮",
+            "🏠", "⚙️", "🔧", "📝", "📊", "🗂️", "🔍", "⭐"
+        ]
+
+        preset_grid = QGridLayout()
+        preset_grid.setSpacing(4)
+        for idx, emoji in enumerate(emoji_presets):
+            btn = QPushButton(emoji)
+            btn.setFixedSize(40, 40)
+            btn.clicked.connect(lambda checked, e=emoji: self.icon_field.setText(e))
+            preset_grid.addWidget(btn, idx // 8, idx % 8)
+
+        icon_layout.addLayout(preset_grid)
+        layout.addLayout(icon_layout)
+
         # ボタン
         button_box = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -122,12 +158,13 @@ class LinkAddDialog(QDialog):
                 # 自動タグを適用
                 self._apply_auto_tags(self.path)
 
-    def get_values(self) -> Tuple[str, str, str]:
+    def get_values(self) -> Tuple[str, str, str, str]:
         """入力値を取得"""
         return (
             self.name_field.text(),
             self.path,
-            self.tags_field.text()
+            self.tags_field.text(),
+            self.icon_field.text()
         )
 
 
@@ -138,7 +175,7 @@ class LinkEditDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(tr("dialogs.edit_link"))
         self.setModal(True)
-        self.resize(500, 180)
+        self.resize(500, 400)
 
         self.record = record
         self._setup_ui()
@@ -184,6 +221,42 @@ class LinkEditDialog(QDialog):
 
         layout.addLayout(tags_layout)
 
+        # カスタムアイコン選択
+        icon_layout = QVBoxLayout()
+        icon_header_layout = QHBoxLayout()
+        icon_label = WidgetFactory.create_label("アイコン:", "default")
+        icon_header_layout.addWidget(icon_label)
+
+        self.icon_field = WidgetFactory.create_input_field("絵文字を入力", "text")
+        self.icon_field.setMaxLength(2)  # 絵文字は通常1-2文字
+        icon_header_layout.addWidget(self.icon_field)
+
+        clear_icon_btn = WidgetFactory.create_button("デフォルトに戻す", "secondary")
+        clear_icon_btn.clicked.connect(lambda: self.icon_field.clear())
+        icon_header_layout.addWidget(clear_icon_btn)
+
+        icon_layout.addLayout(icon_header_layout)
+
+        # よく使う絵文字のプリセット
+        preset_label = WidgetFactory.create_label("よく使う絵文字:", "default")
+        icon_layout.addWidget(preset_label)
+
+        emoji_presets = [
+            "📁", "📄", "📷", "🎵", "🎬", "📚", "💻", "🎮",
+            "🏠", "⚙️", "🔧", "📝", "📊", "🗂️", "🔍", "⭐"
+        ]
+
+        preset_grid = QGridLayout()
+        preset_grid.setSpacing(4)
+        for idx, emoji in enumerate(emoji_presets):
+            btn = QPushButton(emoji)
+            btn.setFixedSize(40, 40)
+            btn.clicked.connect(lambda checked, e=emoji: self.icon_field.setText(e))
+            preset_grid.addWidget(btn, idx // 8, idx % 8)
+
+        icon_layout.addLayout(preset_grid)
+        layout.addLayout(icon_layout)
+
         # ボタン
         button_box = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -197,10 +270,12 @@ class LinkEditDialog(QDialog):
         self.path_display.setText(self.record.path)
         self.name_field.setText(self.record.name)
         self.tags_field.setText(self.record.tags)
+        self.icon_field.setText(self.record.custom_icon)
 
-    def get_values(self) -> Tuple[str, str]:
+    def get_values(self) -> Tuple[str, str, str]:
         """入力値を取得"""
         return (
             self.name_field.text(),
-            self.tags_field.text()
+            self.tags_field.text(),
+            self.icon_field.text()
         )
